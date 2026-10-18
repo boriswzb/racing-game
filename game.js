@@ -151,6 +151,16 @@
     },
   ];
 
+  const PAINTS = [
+    { id: 'pearl', name: '珍珠白', color: '#d9d3ec' },
+    { id: 'gold', name: '开罗金', color: '#ffb347' },
+    { id: 'teal', name: '尼罗河青', color: '#2ee6d6' },
+    { id: 'crimson', name: '赤焰红', color: '#ff4f6d' },
+    { id: 'midnight', name: '午夜蓝', color: '#4f73ff' },
+    { id: 'sand', name: '沙漠沙', color: '#c89b63' },
+  ];
+  const PAINT_BY_ID = Object.fromEntries(PAINTS.map((p) => [p.id, p]));
+
   const THEMES = {
     midnight: {
       id: 'midnight',
@@ -429,6 +439,7 @@
       },
       lastTrack: 'midnight',
       lastCar: 'vanta',
+      paint: {},
       settings: { ...DEFAULT_SETTINGS },
     };
   }
@@ -465,6 +476,7 @@
       achievements: { ...(parsed.achievements || {}) },
       daily: parsed.daily || null,
       stats: { ...base.stats, ...(parsed.stats || {}) },
+      paint: { ...(parsed.paint || {}) },
       settings: { ...base.settings, ...(parsed.settings || {}) },
     };
   }
@@ -482,6 +494,11 @@
 
   function saveProfile() {
     storage.set('nightshift.profile.v3', JSON.stringify(profile));
+  }
+
+  function paintForCar(carId) {
+    const selected = PAINT_BY_ID[profile.paint && profile.paint[carId]];
+    return selected ? selected.color : (CAR_BY_ID[carId] || CAR_BY_ID.vanta).color;
   }
 
   function upgradeLevels(carId) {
@@ -672,7 +689,7 @@
   const RACER_COUNT = 6;
   const MAX_KMH = 500;
   const WALL_LIMIT = 1.27;
-  const APP_VERSION = '8.0.1';
+  const APP_VERSION = '8.1';
 
   const QUALITY_PRESETS = {
     high: { drawDistance: 300, dpr: 2, particles: 1, label: '高' },
@@ -1913,7 +1930,7 @@
   const cars = {};
   const carSprites = {};
   CAR_DEFS.forEach((def) => {
-    const sprite = makeCarSprite(def.color, def.accent, def.dark, { player: true, variant: def.id });
+    const sprite = makeCarSprite(paintForCar(def.id), def.accent, def.dark, { player: true, variant: def.id });
     carSprites[def.id] = sprite;
   });
   cars.player = carSprites.vanta;
@@ -2757,6 +2774,248 @@
     return carPreviewUrls.get(car.id);
   }
 
+  /* ------------------------------ 3D garage view ---------------------------- */
+
+  const garage = {
+    yaw: -0.92,
+    dragging: false,
+    lastX: 0,
+    lastTime: 0,
+    key: '',
+  };
+  const garageModelCache = new Map();
+
+  function garageCanvasSize() {
+    const canvas = $('garageCanvas');
+    if (!canvas) return null;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const cssW = Math.max(300, canvas.clientWidth || 640);
+    const cssH = Math.max(220, canvas.clientHeight || 330);
+    if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { canvas, ctx, w: cssW, h: cssH };
+  }
+
+  function buildGarageModel(carId, paint) {
+    const key = `${carId}|${paint}`;
+    if (garageModelCache.has(key)) return garageModelCache.get(key);
+    const def = CAR_BY_ID[carId] || CAR_BY_ID.vanta;
+    const body = hexToRgb(paint);
+    const accent = hexToRgb(def.accent);
+    const dark = mixRgb(body, [8, 5, 10], 0.66);
+    const glass = [7, 8, 18];
+    const tire = [8, 7, 10];
+    const faces = [];
+    const addQuad = (pts, color, glow = false) => {
+      const normal = faceNormal(pts);
+      if (!normal) return;
+      faces.push({ pts, color, glow, normal });
+    };
+    const addBox = (cx, cy, cz, w, h, d, color, glow = false) => {
+      const x0 = cx - w / 2, x1 = cx + w / 2;
+      const y0 = cy - h / 2, y1 = cy + h / 2;
+      const z0 = cz - d / 2, z1 = cz + d / 2;
+      addQuad([[x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0]], color, glow);
+      addQuad([[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], mixRgb(color, [0, 0, 0], 0.5));
+      addQuad([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]], color, glow);
+      addQuad([[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]], mixRgb(color, [0, 0, 0], 0.2));
+      addQuad([[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]], mixRgb(color, [0, 0, 0], 0.28));
+      addQuad([[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]], mixRgb(color, [0, 0, 0], 0.28));
+    };
+    const scaleW = def.id === 'nova' ? 1.06 : def.id === 'kaze' ? 0.94 : 1;
+    const profile = [
+      { z: -580, y: 70, w: 680, c: dark }, { z: -580, y: 245, w: 680, c: dark },
+      { z: -540, y: 315, w: 670, c: body }, { z: -390, y: 330, w: 670, c: body },
+      { z: -295, y: 500, w: 590, c: glass }, { z: -190, y: 555, w: 535, c: body },
+      { z: 155, y: 555, w: 535, c: body }, { z: 265, y: 490, w: 590, c: glass },
+      { z: 370, y: 345, w: 640, c: body }, { z: 515, y: 325, w: 655, c: body },
+      { z: 570, y: 250, w: 625, c: body }, { z: 570, y: 85, w: 650, c: dark },
+      { z: 450, y: 52, w: 680, c: dark }, { z: -450, y: 52, w: 680, c: dark },
+    ];
+    profile.forEach((p) => { p.w *= scaleW; });
+    for (const side of [-1, 1]) {
+      for (let i = 1; i < profile.length - 1; i++) {
+        const a = profile[0], b = profile[i], c = profile[i + 1];
+        addQuad([[side * a.w / 2, a.y, a.z], [side * b.w / 2, b.y, b.z], [side * c.w / 2, c.y, c.z], [side * a.w / 2, a.y, a.z]], side < 0 ? dark : mixRgb(body, [0, 0, 0], 0.12));
+      }
+    }
+    for (let i = 0; i < profile.length; i++) {
+      const a = profile[i], b = profile[(i + 1) % profile.length];
+      addQuad([[-a.w / 2, a.y, a.z], [a.w / 2, a.y, a.z], [b.w / 2, b.y, b.z], [-b.w / 2, b.y, b.z]], i === profile.length - 1 ? dark : a.c);
+    }
+    for (const side of [-1, 1]) {
+      addQuad([[side * 305, 375, -295], [side * 282, 525, -190], [side * 282, 525, 155], [side * 305, 375, 250]], glass);
+      addBox(side * 335 * scaleW, 300, 0, 5, 8, 760, accent, true);
+      addBox(side * 300, 315, 552, 42, 25, 18, accent, true);
+    }
+    for (const side of [-1, 1]) {
+      for (const z of [-365, 355]) {
+        addBox(side * 350 * scaleW, 116, z, 132, 226, 278, tire);
+        addBox(side * 420 * scaleW, 116, z, 18, 112, 120, accent, true);
+      }
+    }
+    const wingW = (def.id === 'nova' ? 850 : def.id === 'kaze' ? 680 : 790) * scaleW;
+    addBox(0, 390, -555, wingW, 32, 116, dark);
+    addBox(0, 410, -555, wingW * 0.92, 7, 28, accent, true);
+    for (const side of [-1, 1]) addBox(side * (wingW / 2 - 66), 340, -535, 26, 105, 66, dark);
+    addBox(0, 260, -585, 510 * scaleW, 58, 20, accent, true);
+    addBox(0, 170, -592, 420 * scaleW, 42, 20, mixRgb(accent, [0, 0, 0], 0.3), true);
+    addBox(0, 88, -578, 550 * scaleW, 54, 28, tire);
+    for (const side of [-1, 1]) addBox(side * 158, 120, -605, 68, 40, 24, accent, true);
+    const model = { faces, width: 680 * scaleW, height: 610, length: 1160 };
+    garageModelCache.set(key, model);
+    return model;
+  }
+
+  function faceNormal(pts) {
+    if (!pts || pts.length < 3) return null;
+    const a = pts[0], b = pts[1], c = pts[2];
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+    const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+    const nx = uy * vz - uz * vy;
+    const ny = uz * vx - ux * vz;
+    const nz = ux * vy - uy * vx;
+    const len = Math.hypot(nx, ny, nz) || 1;
+    return [nx / len, ny / len, nz / len];
+  }
+
+  function projectGaragePoint(p, eye, right, up, fwd, w, h, fov) {
+    const rel = [p[0] - eye[0], p[1] - eye[1], p[2] - eye[2]];
+    const x = rel[0] * right[0] + rel[1] * right[1] + rel[2] * right[2];
+    const y = rel[0] * up[0] + rel[1] * up[1] + rel[2] * up[2];
+    const z = rel[0] * fwd[0] + rel[1] * fwd[1] + rel[2] * fwd[2];
+    if (z <= 30) return null;
+    const f = 1 / Math.tan((fov * Math.PI / 180) / 2);
+    const aspect = w / h;
+    return [w / 2 + (f / aspect) * x / z * w / 2, h / 2 - f * y / z * h / 2, z];
+  }
+
+  function renderGarage(now, force = false) {
+    if (!ui.setup || ui.setup.classList.contains('is-hidden')) return;
+    const info = garageCanvasSize();
+    if (!info) return;
+    const { ctx, w, h } = info;
+    const dt = garage.lastTime ? Math.min(0.05, (now - garage.lastTime) / 1000) : 0;
+    garage.lastTime = now;
+    if (!garage.dragging) garage.yaw += dt * 0.34;
+    const model = buildGarageModel(selectedCarId, paintForCar(selectedCarId));
+    const yaw = garage.yaw;
+    const cy = Math.cos(yaw), sy = Math.sin(yaw);
+    const eye = [0, 450, -2150];
+    const target = [0, 300, 0];
+    const fwd = [target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]];
+    const fl = Math.hypot(...fwd) || 1;
+    fwd[0] /= fl; fwd[1] /= fl; fwd[2] /= fl;
+    const right = [-fwd[2], 0, fwd[0]];
+    const rl = Math.hypot(right[0], right[2]) || 1;
+    right[0] /= rl; right[2] /= rl;
+    const up = [
+      right[1] * fwd[2] - right[2] * fwd[1],
+      right[2] * fwd[0] - right[0] * fwd[2],
+      right[0] * fwd[1] - right[1] * fwd[0],
+    ];
+    const fov = 36;
+    const project = (p) => projectGaragePoint(p, eye, right, up, fwd, w, h, fov);
+
+    ctx.clearRect(0, 0, w, h);
+    // Ground glow and grid
+    const gx = w / 2;
+    const gy = h * 0.78;
+    const ground = ctx.createRadialGradient(gx, gy, 8, gx, gy, w * 0.46);
+    ground.addColorStop(0, 'rgba(255,154,61,0.16)');
+    ground.addColorStop(0.5, 'rgba(46,230,214,0.06)');
+    ground.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = ground;
+    ctx.fillRect(0, 0, w, h);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,179,71,0.12)';
+    ctx.lineWidth = 1;
+    for (let i = -4; i <= 4; i++) {
+      const p1 = project([i * 280, 0, -1500]);
+      const p2 = project([i * 280, 0, 1500]);
+      if (p1 && p2) { ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.stroke(); }
+    }
+    for (let i = -4; i <= 4; i++) {
+      const p1 = project([-1500, 0, i * 280]);
+      const p2 = project([1500, 0, i * 280]);
+      if (p1 && p2) { ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.stroke(); }
+    }
+    ctx.restore();
+
+    const rotated = [];
+    for (const face of model.faces) {
+      const pts = face.pts.map(([x, y, z]) => [x * cy + z * sy, y, -x * sy + z * cy]);
+      const projected = pts.map(project);
+      if (projected.some((p) => !p)) continue;
+      const depth = projected.reduce((s, p) => s + p[2], 0) / projected.length;
+      const normal = faceNormal(pts);
+      const light = [ -0.42, 0.82, -0.38 ];
+      const lum = 0.58 + 0.42 * Math.abs(normal[0] * light[0] + normal[1] * light[1] + normal[2] * light[2]);
+      rotated.push({ projected, depth, color: face.color, glow: face.glow, lum });
+    }
+    rotated.sort((a, b) => b.depth - a.depth);
+    const shadow = project([0, 0, 0]);
+    if (shadow) {
+      ctx.save();
+      ctx.translate(shadow[0], shadow[1] + 14);
+      ctx.scale(1, 0.18);
+      const sg = ctx.createRadialGradient(0, 0, 10, 0, 0, 420);
+      sg.addColorStop(0, 'rgba(0,0,0,0.55)');
+      sg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = sg;
+      ctx.beginPath();
+      ctx.arc(0, 0, 420, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    for (const face of rotated) {
+      const { projected, color, lum, glow } = face;
+      const rgb = color.map((v) => Math.round(clamp(v * lum, 0, 255)));
+      ctx.beginPath();
+      ctx.moveTo(projected[0][0], projected[0][1]);
+      for (let i = 1; i < projected.length; i++) ctx.lineTo(projected[i][0], projected[i][1]);
+      ctx.closePath();
+      ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+      ctx.fill();
+      ctx.strokeStyle = glow ? `rgba(${color[0]},${color[1]},${color[2]},0.9)` : 'rgba(255,255,255,0.055)';
+      ctx.lineWidth = glow ? 2 : 0.7;
+      if (glow) { ctx.shadowColor = `rgb(${color[0]},${color[1]},${color[2]})`; ctx.shadowBlur = 12; }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  function renderGaragePaints() {
+    const host = $('garagePaints');
+    if (!host) return;
+    const def = CAR_BY_ID[selectedCarId] || CAR_BY_ID.vanta;
+    const current = (profile.paint && profile.paint[selectedCarId]) || 'stock';
+    const options = [{ id: 'stock', name: '原厂车漆', color: def.color }, ...PAINTS];
+    host.innerHTML = options.map((paint) => `
+      <button type="button" class="paint-swatch ${paint.id === current ? 'on' : ''}" data-paint="${paint.id}"
+        style="--pc:${paint.color}" title="${paint.name}" aria-label="${paint.name}"></button>`).join('');
+    const name = $('garagePaintName');
+    if (name) name.textContent = (options.find((p) => p.id === current) || options[0]).name;
+  }
+
+  function selectPaint(paintId) {
+    const def = CAR_BY_ID[selectedCarId] || CAR_BY_ID.vanta;
+    if (paintId === 'stock') delete profile.paint[selectedCarId];
+    else if (PAINT_BY_ID[paintId]) profile.paint[selectedCarId] = paintId;
+    else return;
+    const paint = paintForCar(selectedCarId);
+    carSprites[selectedCarId] = makeCarSprite(paint, def.accent, def.dark, { player: true, variant: def.id });
+    cars.player = carSprites[selectedCarId];
+    carPreviewUrls.delete(selectedCarId);
+    saveProfile();
+    renderSetup();
+    showToast(`车漆已更新 · ${paintId === 'stock' ? '原厂' : PAINT_BY_ID[paintId].name}`, 1800, true);
+  }
+
   function carDefForRace() {
     return effectiveCar(CAR_BY_ID[selectedCarId] || CAR_BY_ID.vanta);
   }
@@ -2842,6 +3101,8 @@
     const difficulty = DIFFICULTY[getSettings().difficulty] || DIFFICULTY.standard;
     ui.setupSummary.textContent = `${track.name} · ${car.name}`;
     ui.setupSub.textContent = `${track.laps} LAPS · 5 RIVALS · ${difficulty.label}`;
+    renderGaragePaints();
+    renderGarage(performance.now(), true);
     updateProfileUI();
   }
 
@@ -6645,6 +6906,41 @@
     buyUpgrade(btn.getAttribute('data-upgrade'));
   });
 
+  const garagePaintsEl = $('garagePaints');
+  if (garagePaintsEl) {
+    garagePaintsEl.addEventListener('click', (e) => {
+      const swatch = e.target.closest('[data-paint]');
+      if (!swatch) return;
+      selectPaint(swatch.getAttribute('data-paint'));
+    });
+  }
+  const garageCanvasEl = $('garageCanvas');
+  if (garageCanvasEl) {
+    garageCanvasEl.addEventListener('pointerdown', (e) => {
+      garage.dragging = true;
+      garage.lastX = e.clientX;
+      garage.lastTime = 0;
+      garageCanvasEl.setPointerCapture(e.pointerId);
+      garageCanvasEl.style.cursor = 'grabbing';
+    });
+    garageCanvasEl.addEventListener('pointermove', (e) => {
+      if (!garage.dragging) return;
+      garage.yaw += (e.clientX - garage.lastX) * 0.012;
+      garage.lastX = e.clientX;
+    });
+    const stopDrag = (e) => {
+      garage.dragging = false;
+      garage.lastX = 0;
+      garage.lastTime = 0;
+      garageCanvasEl.style.cursor = 'grab';
+      if (garageCanvasEl.hasPointerCapture && garageCanvasEl.hasPointerCapture(e.pointerId)) {
+        garageCanvasEl.releasePointerCapture(e.pointerId);
+      }
+    };
+    garageCanvasEl.addEventListener('pointerup', stopDrag);
+    garageCanvasEl.addEventListener('pointercancel', stopDrag);
+  }
+
   ui.profileTabs.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-profile-tab]');
     if (!btn) return;
@@ -6731,6 +7027,7 @@
 
     update(dt);
     render(elapsed);
+    if (ui.setup && !ui.setup.classList.contains('is-hidden')) renderGarage(now);
 
     if (race.mode === 'racing' && dt > 0) {
       // HUD position updates are throttled inside updateHud; race time is smooth.
@@ -6972,7 +7269,7 @@
   applyRenderer();
   resize();
   if (forcedRenderer === 'webgl' && useWebGL) {
-    setTimeout(() => showToast('WEBGL 3D ACTIVE · 开罗狂飙 v8.0.1', 2600, true), 700);
+    setTimeout(() => showToast('WEBGL 3D ACTIVE · 开罗狂飙 v8.1', 2600, true), 700);
   }
 
   applyTrack(selectedTrackId, true);

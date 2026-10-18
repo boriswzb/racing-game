@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffb347'/%3E%3Cstop offset='1' stop-color='%232ee6d6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='12' fill='%230b0508'/%3E%3Ccircle cx='45' cy='18' r='7' fill='%23ffb347'/%3E%3Cpath d='M8 52 L28 22 L48 52 Z' fill='url(%23g)'/%3E%3Cpath d='M22 52 L36 30 L50 52 Z' fill='%232ee6d6' fill-opacity='.6'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=8.0.1">
+  <link rel="stylesheet" href="styles.css?v=8.1">
 </head>
 <body>
   <div id="app">
@@ -215,7 +215,27 @@
 
           <section class="setup-section">
             <div class="section-head">
-              <h3><i>03</i> 改装</h3>
+              <h3><i>03</i> 3D 车模 / 涂漆</h3>
+              <p>拖动旋转车辆，实时更换车漆</p>
+            </div>
+            <div class="garage-panel">
+              <div class="garage-stage">
+                <canvas id="garageCanvas" aria-label="360 度 3D 车辆预览"></canvas>
+                <div class="garage-badge">360° LIVE PAINT</div>
+                <div class="garage-hint">拖动旋转 · 松手自动旋转</div>
+              </div>
+              <div class="garage-side">
+                <span class="garage-label">PAINT / 车漆</span>
+                <div id="garagePaints" class="paint-swatches"></div>
+                <b id="garagePaintName">珍珠白</b>
+                <p>车漆会同步到比赛中的车辆，并保存在本机。</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="setup-section">
+            <div class="section-head">
+              <h3><i>04</i> 改装</h3>
               <p>为当前赛车升级性能，改装永久保存</p>
             </div>
             <div id="upgradeList" class="upgrade-list"></div>
@@ -516,6 +536,6 @@
     <div id="rotateHint" class="rotate-hint">横屏体验更佳 <span>↻</span></div>
   </div>
 
-  <script src="game.js?v=8.0.1"></script>
+  <script src="game.js?v=8.1"></script>
 </body>
 </html>
