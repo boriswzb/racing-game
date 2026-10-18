@@ -1,4 +1,4 @@
-# NIGHTSHIFT · 霓虹极速 4.0
+# NIGHTSHIFT · 霓虹极速 5.0
 
 一款可以直接在浏览器里玩的霓虹合成波（Synthwave）风格伪 3D 街机赛车游戏。无需安装、无需联网、无外部素材，所有车辆、赛道场景、粒子和音效都由代码实时生成。
 
@@ -11,9 +11,10 @@
 - 推荐使用 Chrome / Edge 等现代浏览器
 - 建议开启声音；音效和背景音乐使用 Web Audio 实时合成
 - 支持键盘、手柄和触屏，支持横屏 / 竖屏
+- 可在设置中安装为桌面/主屏幕应用，首次加载后支持离线
 - 在线试玩：https://boriswzb.github.io/racing-game/
 
-## 4.0 内容
+## 5.0 内容
 
 ### 四条赛道
 
@@ -64,7 +65,7 @@
 - 起跑灯、倒计时、圈数、实时排名、分段计时、Delta、迷你地图
 - 幽灵车（本赛道最快圈回放）与实时 **GHOST Delta**
 - 分段最佳、最佳单圈、赛道纪录、本地 Top 5 全部本地保存
-- 低/标准/高转向辅助，4 档镜头，自动油门与幽灵开关
+- 低/标准/高转向辅助，近/远两档镜头，自动油门与幽灵开关
 - 手柄支持：左摇杆转向、RT 油门、LT 刹车、A 氮气、Start 暂停
 
 ### 赛事回放
@@ -90,6 +91,25 @@
 - 适合做壁纸、分享比赛瞬间或记录赛道氛围
 
 ![照片模式](preview-photo.png)
+
+### 安装、离线与画质
+
+- **PWA 安装**：在设置中点击「安装」即可作为独立应用启动（Chrome / Edge / Android）
+- **离线游玩**：Service Worker 缓存游戏外壳，首次加载后断网也能启动
+- **自动更新**：新版本下载完成后会提示「刷新后生效」
+- **画质设置**：自动 / 高 / 均衡 / 性能
+  - 自动根据设备、触屏和 CPU 核心数选择
+  - 画质会影响分辨率上限、绘制距离、粒子上限与远景细节
+  - 低画质适合老设备 / 高 DPI 手机，高画质保留完整霓虹远景
+- 安装与离线不影响本地进度：CR、改装、纪录、回放和照片仍然保存在本机
+
+### 本地照片库
+
+- 照片模式保存时，同时下载 PNG 并写入浏览器 **IndexedDB**
+- 在「车手档案 → 照片」查看最近 12 张照片
+- 支持在照片库中再次下载或删除
+- 照片不会上传到服务器
+- 旧照片超过 12 张时自动清理最早的照片
 
 ## 操作
 
@@ -125,18 +145,25 @@
 - Web Audio 合成引擎声、风噪、氮气声和 Synthwave 背景音乐
 - 本地 profile v3 存档（CR、车辆、改装、赛事、每日挑战、成就、Top 5、幽灵车、回放、设置）
 - 比赛回放以 10Hz 记录玩家与 AI，最佳比赛回放随赛道纪录保存
-- 照片模式通过 Canvas `toBlob` 导出无界面 PNG
+- 照片模式通过 Canvas `toBlob` 导出无界面 PNG，并写入 IndexedDB 照片库
+- PWA manifest + Service Worker 离线缓存，支持桌面/移动安装和自动更新提示
+- 画质档位动态调整 DPR 上限、绘制距离和粒子预算
 - 旧版 2.x 存档自动迁移
 - 响应式布局与触屏控制
 
 ## 文件
 
 - `index.html` — 页面结构、HUD、赛事选择、生涯、车手档案、回放/照片与设置界面
-- `styles.css` — 界面、主题色、改装/档案/回放页面与响应式样式
-- `game.js` — 渲染、物理、AI、改装、任务、成就、回放、音效、存档与全部游戏逻辑
+- `styles.css` — 界面、主题色、改装/档案/回放/照片页面与响应式样式
+- `game.js` — 渲染、物理、AI、改装、任务、成就、回放、照片库、音效、存档与全部游戏逻辑
+- `manifest.webmanifest` — PWA 应用信息
+- `sw.js` — 离线缓存与版本更新
+- `icon-192.png` / `icon-512.png` / `apple-touch-icon.png` — 安装图标
 - `启动游戏.bat` — Windows 一键启动
 
 ## 浏览器兼容
 
 推荐 Chrome / Edge 90+、Firefox 90+、Safari 15+。
-游戏使用 Canvas 2D、Web Audio、Gamepad API、pointer events 和 `dvh` / `clip-path` 等现代 Web API。
+游戏使用 Canvas 2D、Web Audio、Gamepad API、IndexedDB、Service Worker、pointer events 和 `dvh` / `clip-path` 等现代 Web API。
+
+PWA 安装与离线缓存需要 HTTPS 或 localhost；直接双击 `index.html` 仍可正常游玩，但不会注册 Service Worker。iOS Safari 可通过「分享 → 添加到主屏幕」安装。

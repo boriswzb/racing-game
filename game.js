@@ -362,6 +362,7 @@
     difficulty: 'standard',
     assist: 'low',
     camera: 'near',
+    quality: 'auto',
     autoThrottle: false,
     ghost: true,
     masterVolume: 0.8,
@@ -635,13 +636,33 @@
   let TRACK_LENGTH = SEGMENT_LENGTH * TRACK_SEGMENTS;
   const ROAD_WIDTH = 2200;
   let cameraHeight = 1500;
-  const DRAW_DISTANCE = 300;
+  let DRAW_DISTANCE = 300;
   const FIELD_OF_VIEW = 100;
   const CAMERA_DEPTH = 1 / Math.tan((FIELD_OF_VIEW / 2) * Math.PI / 180);
   let PLAYER_Z = cameraHeight * CAMERA_DEPTH;
   const RACER_COUNT = 6;
   const MAX_KMH = 500;
   const WALL_LIMIT = 1.27;
+
+  const QUALITY_PRESETS = {
+    high: { drawDistance: 300, dpr: 2, particles: 1, label: '高' },
+    balanced: { drawDistance: 250, dpr: 1.5, particles: 0.7, label: '均衡' },
+    low: { drawDistance: 180, dpr: 1, particles: 0.35, label: '性能' },
+  };
+  let QUALITY = { ...QUALITY_PRESETS.high, level: 'high' };
+
+  function applyQuality() {
+    const requested = getSettings().quality || 'auto';
+    let level = requested;
+    if (level === 'auto') {
+      const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      const cores = navigator.hardwareConcurrency || 8;
+      level = coarse || window.innerWidth < 820 || cores <= 4 ? 'balanced' : 'high';
+    }
+    const preset = QUALITY_PRESETS[level] || QUALITY_PRESETS.high;
+    QUALITY = { ...preset, level };
+    DRAW_DISTANCE = preset.drawDistance;
+  }
 
   applyCameraSetting();
 
@@ -2375,7 +2396,10 @@
     setDifficulty: $('setDifficulty'),
     setAssist: $('setAssist'),
     setCamera: $('setCamera'),
+    setQuality: $('setQuality'),
     setAutoThrottle: $('setAutoThrottle'),
+    installAppBtn: $('installAppBtn'),
+    installHint: $('installHint'),
     setGhost: $('setGhost'),
     setMaster: $('setMaster'),
     setMusic: $('setMusic'),
@@ -2620,6 +2644,7 @@
 
   function renderProfile() {
     if (!ui.profileContent) return;
+    clearPhotoGalleryUrls();
     ensureDaily();
     updateProfileUI();
     ui.profileCoinsLarge.textContent = String(profile.coins);
@@ -2680,6 +2705,8 @@
       ui.profileContent.innerHTML = `
         <div class="profile-section-head"><div><span>ACHIEVEMENTS</span><h3>成就</h3></div><p>${unlockedAchievements} / ${ACHIEVEMENTS.length} 已解锁</p></div>
         <div class="achievement-list">${items}</div>`;
+    } else if (profileTab === 'photos') {
+      renderPhotoGallery();
     } else {
       const blocks = TRACK_DEFS.map((track) => {
         const record = getTrackRecord(track.id);
@@ -2728,6 +2755,7 @@
     ui.setDifficulty.value = s.difficulty;
     ui.setAssist.value = s.assist;
     ui.setCamera.value = s.camera;
+    ui.setQuality.value = s.quality || 'auto';
     ui.setAutoThrottle.checked = !!s.autoThrottle;
     ui.setGhost.checked = !!s.ghost;
     ui.setMaster.value = Math.round((s.masterVolume ?? 0.8) * 100);
@@ -2736,11 +2764,13 @@
   }
 
   function applySettingsFromUI() {
+    const previousQuality = getSettings().quality || 'auto';
     const s = {
       ...getSettings(),
       difficulty: ui.setDifficulty.value,
       assist: ui.setAssist.value,
       camera: ui.setCamera.value,
+      quality: ui.setQuality.value,
       autoThrottle: ui.setAutoThrottle.checked,
       ghost: ui.setGhost.checked,
       masterVolume: Number(ui.setMaster.value) / 100,
@@ -2751,6 +2781,10 @@
     applyCameraSetting();
     audio.setVolumes({ master: s.masterVolume, music: s.musicVolume, engine: s.engineVolume });
     if (race.ghost) race.ghost.visible = !!s.ghost;
+    if (previousQuality !== s.quality) {
+      applyQuality();
+      resize();
+    }
     saveProfile();
     if (race.mode === 'menu') updateProfileUI();
   }
@@ -2758,6 +2792,8 @@
   function resetSettings() {
     profile.settings = { ...DEFAULT_SETTINGS };
     applyCameraSetting();
+    applyQuality();
+    resize();
     audio.setVolumes({
       master: profile.settings.masterVolume,
       music: profile.settings.musicVolume,
@@ -3013,7 +3049,7 @@
   function resize() {
     W = window.innerWidth;
     H = window.innerHeight;
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    DPR = Math.min(window.devicePixelRatio || 1, QUALITY.dpr || 2);
     canvas.width = Math.round(W * DPR);
     canvas.height = Math.round(H * DPR);
     canvas.style.width = `${W}px`;
@@ -3025,7 +3061,10 @@
   let resizeTimer = 0;
   function scheduleResize() {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(resize, 110);
+    resizeTimer = setTimeout(() => {
+      applyQuality();
+      resize();
+    }, 110);
   }
 
   function project(p, cameraX, cameraY, cameraZ) {
@@ -3511,7 +3550,9 @@
   }
 
   function spawnParticle(x, y, vx, vy, life, size, color, gravity = 0, additive = true) {
-    if (particles.length > 260) particles.shift();
+    if (QUALITY.particles < 1 && Math.random() > QUALITY.particles) return;
+    const cap = Math.round(320 * QUALITY.particles) + 40;
+    while (particles.length >= cap) particles.shift();
     particles.push({ x, y, vx, vy, life, maxLife: life, size, color, gravity, additive });
   }
 
@@ -4877,27 +4918,20 @@
     updateReplayUI();
   }
 
-  function saveReplayPhoto() {
+  async function saveReplayPhoto() {
     if (!replayState.photo) return;
     const name = `nightshift-${race.trackId}-${Date.now()}.png`;
-    const trigger = (href) => {
-      const a = document.createElement('a');
-      a.href = href;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      showToast('PHOTO SAVED · PNG', 1600, true);
+    const finish = async (blob) => {
+      if (!blob) return;
+      downloadBlob(blob, name);
+      const stored = await savePhotoToGallery(blob);
+      showToast(stored ? 'PHOTO SAVED · 照片库 + PNG' : 'PHOTO SAVED · PNG', 1800, true);
     };
     if (canvas.toBlob) {
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        trigger(url);
-        setTimeout(() => URL.revokeObjectURL(url), 1500);
-      }, 'image/png');
+      canvas.toBlob((blob) => { finish(blob); }, 'image/png');
     } else {
-      trigger(canvas.toDataURL('image/png'));
+      const data = canvas.toDataURL('image/png');
+      fetch(data).then((res) => res.blob()).then(finish).catch(() => {});
     }
   }
 
@@ -5246,6 +5280,7 @@
   $('settingsCloseBtn').addEventListener('click', closeSettings);
   $('settingsDoneBtn').addEventListener('click', closeSettings);
   $('settingsResetBtn').addEventListener('click', resetSettings);
+  $('installAppBtn').addEventListener('click', installApp);
   $('replayBtn').addEventListener('click', startRace);
   $('watchReplayBtn').addEventListener('click', () => startReplay(race.lastReplay, 'results'));
   $('menuBtn').addEventListener('click', quitToMenu);
@@ -5329,14 +5364,33 @@
     renderProfile();
   });
 
-  ui.profileContent.addEventListener('click', (e) => {
+  ui.profileContent.addEventListener('click', async (e) => {
+    const download = e.target.closest('[data-photo-download]');
+    if (download) {
+      const record = photoRecordsCache.get(download.getAttribute('data-photo-download'));
+      if (record && record.blob) {
+        downloadBlob(record.blob, `nightshift-${record.trackId || 'race'}-${record.createdAt || Date.now()}.png`);
+        showToast('PHOTO DOWNLOADED', 1400, true);
+      }
+      return;
+    }
+    const remove = e.target.closest('[data-photo-delete]');
+    if (remove) {
+      if (!window.confirm('删除这张照片？')) return;
+      try {
+        await deletePhotoRecord(remove.getAttribute('data-photo-delete'));
+        photoRecordsCache.delete(remove.getAttribute('data-photo-delete'));
+      } catch (err) { /* noop */ }
+      renderPhotoGallery();
+      return;
+    }
     const btn = e.target.closest('[data-replay-track]');
     if (!btn) return;
     const record = getTrackRecord(btn.getAttribute('data-replay-track'));
     if (record.replay) startReplay(record.replay, 'profile');
   });
 
-  [ui.setDifficulty, ui.setAssist, ui.setCamera, ui.setAutoThrottle, ui.setGhost].forEach((el) => {
+  [ui.setDifficulty, ui.setAssist, ui.setCamera, ui.setQuality, ui.setAutoThrottle, ui.setGhost].forEach((el) => {
     el.addEventListener('change', () => {
       applySettingsFromUI();
       if (!getSettings().ghost && race.ghost) race.ghost.visible = false;
@@ -5386,8 +5440,231 @@
     requestAnimationFrame(frame);
   }
 
+  /* --------------------------------- PWA ----------------------------------- */
+
+  let deferredInstallPrompt = null;
+  let swRegistration = null;
+
+  function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  }
+
+  function updateInstallUI() {
+    if (!ui.installAppBtn) return;
+    const row = ui.installAppBtn.closest('.install-row');
+    if (isStandalone()) {
+      ui.installAppBtn.textContent = '已安装';
+      ui.installAppBtn.disabled = true;
+      ui.installHint.textContent = '已作为独立应用运行 · 进度保存在本机';
+      if (row) row.classList.add('installed');
+      return;
+    }
+    if (deferredInstallPrompt) {
+      ui.installAppBtn.textContent = '安装';
+      ui.installAppBtn.disabled = false;
+      ui.installHint.textContent = '安装后可从桌面启动，并支持离线游玩';
+      if (row) row.classList.remove('installed');
+      return;
+    }
+    ui.installAppBtn.textContent = '安装';
+    ui.installAppBtn.disabled = true;
+    ui.installHint.textContent = '使用浏览器菜单「安装应用 / 添加到主屏幕」';
+    if (row) row.classList.remove('installed');
+  }
+
+  async function installApp() {
+    if (!deferredInstallPrompt) {
+      showToast('请使用浏览器菜单安装到主屏幕', 2400, true);
+      return;
+    }
+    const prompt = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    prompt.prompt();
+    try {
+      const choice = await prompt.userChoice;
+      if (choice && choice.outcome === 'accepted') {
+        showToast('NIGHTSHIFT 已安装', 2200, true);
+      }
+    } catch (e) {
+      // user dismissed
+    }
+    updateInstallUI();
+  }
+
+  function setupPwa() {
+    updateInstallUI();
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      updateInstallUI();
+    });
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      updateInstallUI();
+      showToast('NIGHTSHIFT 已安装', 2200, true);
+    });
+
+    if (!('serviceWorker' in navigator)) return;
+    const local = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    if (location.protocol !== 'https:' && !local) return;
+
+    navigator.serviceWorker.register('./sw.js', { scope: './', updateViaCache: 'none' })
+      .then((registration) => {
+        swRegistration = registration;
+        registration.addEventListener('updatefound', () => {
+          const worker = registration.installing;
+          if (!worker) return;
+          worker.addEventListener('statechange', () => {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+              showToast('新版本已就绪 · 刷新后生效', 2800, true);
+            }
+          });
+        });
+      })
+      .catch(() => {
+        // Service worker is an enhancement; the game still works without it.
+      });
+  }
+
+  /* --------------------------------- Photos --------------------------------- */
+
+  const PHOTO_DB_NAME = 'nightshift-media';
+  const PHOTO_STORE = 'photos';
+  let photoDbPromise = null;
+  let photoGalleryUrls = [];
+  let photoRecordsCache = new Map();
+
+  function openPhotoDb() {
+    if (!('indexedDB' in window)) return Promise.reject(new Error('IndexedDB unavailable'));
+    if (!photoDbPromise) {
+      photoDbPromise = new Promise((resolve, reject) => {
+        const request = indexedDB.open(PHOTO_DB_NAME, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(PHOTO_STORE)) {
+            db.createObjectStore(PHOTO_STORE, { keyPath: 'id' });
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+    return photoDbPromise;
+  }
+
+  function photoStore(mode) {
+    return openPhotoDb().then((db) => db.transaction(PHOTO_STORE, mode).objectStore(PHOTO_STORE));
+  }
+
+  function addPhotoRecord(record) {
+    return photoStore('readwrite').then((store) => new Promise((resolve, reject) => {
+      const request = store.put(record);
+      request.onsuccess = () => resolve(record);
+      request.onerror = () => reject(request.error);
+    }));
+  }
+
+  function listPhotoRecords() {
+    return photoStore('readonly').then((store) => new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    }));
+  }
+
+  function deletePhotoRecord(id) {
+    return photoStore('readwrite').then((store) => new Promise((resolve, reject) => {
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    }));
+  }
+
+  function clearPhotoGalleryUrls() {
+    photoGalleryUrls.forEach((url) => URL.revokeObjectURL(url));
+    photoGalleryUrls.length = 0;
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  async function renderPhotoGallery() {
+    clearPhotoGalleryUrls();
+    if (!ui.profileContent) return;
+    ui.profileContent.innerHTML = `
+      <div class="profile-section-head"><div><span>PHOTO LIBRARY</span><h3>照片库</h3></div><p>保存在本机 · 最多 12 张</p></div>
+      <div class="photo-grid"><div class="photo-empty">正在读取照片…</div></div>`;
+    let records = [];
+    try {
+      records = await listPhotoRecords();
+      if (profileTab !== 'photos') return;
+      records.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      records = records.slice(0, 12);
+    } catch (e) {
+      if (profileTab !== 'photos') return;
+      ui.profileContent.innerHTML = `
+        <div class="profile-section-head"><div><span>PHOTO LIBRARY</span><h3>照片库</h3></div></div>
+        <div class="photo-empty">当前浏览器不支持本地照片库；照片会直接下载。</div>`;
+      return;
+    }
+    if (!records.length) {
+      ui.profileContent.innerHTML = `
+        <div class="profile-section-head"><div><span>PHOTO LIBRARY</span><h3>照片库</h3></div><p>0 张照片</p></div>
+        <div class="photo-empty">还没有照片。进入任意回放，打开照片模式并保存。</div>`;
+      return;
+    }
+    photoRecordsCache = new Map(records.map((record) => [record.id, record]));
+    const cards = records.map((record) => {
+      const url = URL.createObjectURL(record.blob);
+      photoGalleryUrls.push(url);
+      const date = new Date(record.createdAt || Date.now());
+      const dateText = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+      return `<figure class="photo-card">
+        <img src="${url}" alt="NIGHTSHIFT 照片 ${dateText}" loading="lazy">
+        <figcaption><span>${record.trackName || 'NIGHTSHIFT'}</span><small>${dateText}</small></figcaption>
+        <div class="photo-actions">
+          <button type="button" data-photo-download="${record.id}">下载</button>
+          <button type="button" data-photo-delete="${record.id}">删除</button>
+        </div>
+      </figure>`;
+    }).join('');
+    ui.profileContent.innerHTML = `
+      <div class="profile-section-head"><div><span>PHOTO LIBRARY</span><h3>照片库</h3></div><p>${records.length} 张照片</p></div>
+      <div class="photo-grid">${cards}</div>
+      <div class="profile-note">照片保存在浏览器 IndexedDB 中，不会上传到服务器。最多保留最近 12 张。</div>`;
+  }
+
+  async function savePhotoToGallery(blob) {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const record = {
+      id,
+      createdAt: Date.now(),
+      trackId: race.trackId,
+      trackName: ui.replayTrackName.textContent || currentTrackDef().name,
+      blob,
+    };
+    try {
+      await addPhotoRecord(record);
+      const all = await listPhotoRecords();
+      all.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      await Promise.all(all.slice(12).map((item) => deletePhotoRecord(item.id)));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /* --------------------------------- Boot ----------------------------------- */
 
+  applyQuality();
   resize();
   applyTrack(selectedTrackId, true);
   applyCarSelection(selectedCarId);
@@ -5411,6 +5688,7 @@
   updateProfileUI();
   renderSetup();
   setStartLights(-1, false);
+  setupPwa();
 
   if (window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
     document.body.classList.add('supports-touch');
