@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#05020d">
+  <meta name="description" content="NIGHTSHIFT 霓虹极速 — 一款可直接在浏览器游玩的霓虹风格 3D 街机赛车游戏。">
+  <title>NIGHTSHIFT · 霓虹极速</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ff2d95'/%3E%3Cstop offset='1' stop-color='%2327e6ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='12' fill='%2305020d'/%3E%3Cpath d='M13 46V18h7l16 18V18h7v28h-7L20 28v18z' fill='url(%23g)'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="game" aria-label="NIGHTSHIFT 赛车游戏画面"></canvas>
+    <div class="fx fx-scanlines"></div>
+    <div class="fx fx-vignette"></div>
+    <div class="fx fx-grain"></div>
+
+    <!-- 比赛 HUD -->
+    <section id="hud" class="hud is-hidden" aria-live="off">
+      <div class="hud-corner hud-tl">
+        <div class="stat-block">
+          <span class="stat-label">LAP</span>
+          <div class="stat-value"><b id="lapValue">1</b><small>/3</small></div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-block">
+          <span class="stat-label">POS</span>
+          <div class="stat-value pos-value"><b id="posValue">6</b><small>/6</small></div>
+        </div>
+      </div>
+
+      <div class="race-clock">
+        <span class="clock-kicker">RACE TIME</span>
+        <b id="raceTime">00:00.000</b>
+        <span class="lap-time">LAP <em id="lapTime">00:00.000</em></span>
+      </div>
+
+      <div class="hud-corner hud-tr">
+        <button id="soundBtn" class="icon-btn" type="button" aria-label="声音开关" title="声音开关 (M)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/><path class="sound-wave" d="M15 5.7v2.1a7 7 0 0 1 0 8.4v2.1a9 9 0 0 0 0-12.6z"/></svg>
+        </button>
+        <button id="pauseBtn" class="icon-btn" type="button" aria-label="暂停" title="暂停 (P)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7V5zm6 0h4v14h-4V5z"/></svg>
+        </button>
+      </div>
+
+      <aside id="leaderboard" class="leaderboard" aria-label="实时排名">
+        <div class="lb-title"><span>LIVE</span> STANDINGS</div>
+        <div id="lbRows" class="lb-rows"></div>
+      </aside>
+
+      <div class="speed-cluster">
+        <div class="speed-dial">
+          <svg class="dial-svg" viewBox="0 0 220 220" aria-hidden="true">
+            <circle class="dial-guide" cx="110" cy="110" r="88" pathLength="100"></circle>
+            <circle class="dial-ticks" cx="110" cy="110" r="98" pathLength="100"></circle>
+            <circle id="dialArc" class="dial-arc" cx="110" cy="110" r="88" pathLength="100"></circle>
+          </svg>
+          <div class="dial-readout">
+            <span id="speedValue">000</span>
+            <small>KM/H</small>
+          </div>
+          <div class="gear-badge"><span>GEAR</span><b id="gearValue">N</b></div>
+        </div>
+        <div class="nitro-wrap">
+          <div class="nitro-head"><span>NITRO</span><em id="nitroValue">100%</em></div>
+          <div class="nitro-track"><div id="nitroFill" class="nitro-fill"></div><div class="nitro-shine"></div></div>
+          <div class="nitro-hint">SPACE / SHIFT</div>
+        </div>
+      </div>
+
+      <div class="best-lap-card">
+        <span>BEST LAP</span>
+        <b id="bestLapHud">--:--.---</b>
+      </div>
+    </section>
+
+    <!-- 倒计时 -->
+    <div id="countdown" class="countdown is-hidden" aria-live="assertive">
+      <div id="countdownNum" class="countdown-num">3</div>
+      <div id="countdownSub" class="countdown-sub">HOLD THE LINE</div>
+    </div>
+
+    <!-- 起步提示 -->
+    <div id="raceToast" class="race-toast"></div>
+
+    <!-- 主菜单 -->
+    <section id="menu" class="screen menu-screen">
+      <div class="menu-shell">
+        <div class="brand-line">
+          <span class="brand-dot"></span>
+          <span>DSK ARCADE</span>
+          <i></i>
+          <span>NIGHT DIVISION // 2088</span>
+        </div>
+
+        <div class="title-wrap">
+          <div class="title-kicker">THE CITY NEVER SLEEPS</div>
+          <h1 class="game-title" data-text="NIGHTSHIFT">NIGHTSHIFT</h1>
+          <div class="title-rule"><span></span><b>霓 虹 极 速</b><span></span></div>
+          <p class="title-copy">穿过午夜城际高速。咬住前车，压住弯心，<br>在霓虹熄灭之前冲过终点。</p>
+        </div>
+
+        <div class="menu-actions">
+          <button id="startBtn" class="start-btn" type="button">
+            <span class="start-glow"></span>
+            <span class="start-copy"><small>NIGHT RUN</small><b>开始比赛</b></span>
+            <span class="start-arrow">→</span>
+          </button>
+          <div class="menu-meta">
+            <div class="meta-item"><span>赛道</span><b>午夜环线</b></div>
+            <div class="meta-item"><span>圈数</span><b>3 LAPS</b></div>
+            <div class="meta-item"><span>对手</span><b>5 RACERS</b></div>
+          </div>
+        </div>
+
+        <div class="menu-footer">
+          <div class="controls-hint">
+            <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> 驾驶</span>
+            <span><kbd>SPACE</kbd> 氮气</span>
+            <span><kbd>P</kbd> 暂停</span>
+          </div>
+          <div class="record-chip">
+            <span>BEST LAP</span>
+            <b id="bestLapMenu">--:--.---</b>
+          </div>
+        </div>
+
+        <div class="menu-side-note">LOCAL SAVE · NO DOWNLOADS<br>BEST EXPERIENCED WITH SOUND ON</div>
+      </div>
+    </section>
+
+    <!-- 暂停 -->
+    <section id="pauseScreen" class="screen center-screen is-hidden">
+      <div class="modal-card pause-card">
+        <div class="modal-eyebrow">SYSTEM HOLD</div>
+        <h2>比赛暂停</h2>
+        <p>引擎仍在待命。</p>
+        <div class="modal-actions vertical">
+          <button id="resumeBtn" class="primary-btn" type="button">继续比赛</button>
+          <button id="pauseRestartBtn" class="ghost-btn" type="button">重新开始</button>
+          <button id="quitBtn" class="ghost-btn" type="button">返回主菜单</button>
+        </div>
+        <div class="modal-key-hint"><kbd>P</kbd> / <kbd>ESC</kbd> 继续</div>
+      </div>
+    </section>
+
+    <!-- 结算 -->
+    <section id="results" class="screen center-screen is-hidden">
+      <div class="modal-card result-card">
+        <div class="result-glow"></div>
+        <div class="result-head">
+          <div class="modal-eyebrow">RACE COMPLETE</div>
+          <div id="resultRank" class="result-rank">P1</div>
+          <h2 id="resultTitle">冠军</h2>
+          <p id="resultSub">你统治了这条午夜高速。</p>
+        </div>
+        <div class="result-grid">
+          <div><span>总时间</span><b id="resultTime">00:00.000</b></div>
+          <div><span>最快单圈</span><b id="resultBestLap">00:00.000</b></div>
+          <div><span>最高时速</span><b id="resultTopSpeed">0 <small>KM/H</small></b></div>
+        </div>
+        <div class="result-bars" id="resultBars"></div>
+        <div class="modal-actions">
+          <button id="replayBtn" class="primary-btn" type="button">再跑一次</button>
+          <button id="menuBtn" class="ghost-btn" type="button">返回主菜单</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 触屏操作 -->
+    <div id="touchControls" class="touch-controls" aria-hidden="true">
+      <div class="touch-steer">
+        <button id="btnLeft" class="touch-btn steer" type="button" aria-label="左转">
+          <svg viewBox="0 0 24 24"><path d="M15 4l-8 8 8 8"/></svg>
+        </button>
+        <button id="btnRight" class="touch-btn steer" type="button" aria-label="右转">
+          <svg viewBox="0 0 24 24"><path d="M9 4l8 8-8 8"/></svg>
+        </button>
+      </div>
+      <div class="touch-pedals">
+        <button id="btnNitro" class="touch-btn nitro" type="button" aria-label="氮气">
+          <span>N2O</span>
+        </button>
+        <button id="btnBrake" class="touch-btn brake" type="button" aria-label="刹车">
+          <span>BRAKE</span>
+        </button>
+        <button id="btnGas" class="touch-btn gas" type="button" aria-label="油门">
+          <svg viewBox="0 0 24 24"><path d="M12 20V4M5 11l7-7 7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="rotateHint" class="rotate-hint">横屏体验更佳 <span>↻</span></div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
