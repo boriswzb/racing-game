@@ -689,7 +689,7 @@
   const RACER_COUNT = 6;
   const MAX_KMH = 500;
   const WALL_LIMIT = 1.27;
-  const APP_VERSION = '8.2';
+  const APP_VERSION = '8.3';
 
   const QUALITY_PRESETS = {
     high: { drawDistance: 300, dpr: 2, particles: 1, label: '高' },
@@ -2258,10 +2258,10 @@
   }
 
   const TRACK3D_STYLES = {
-    midnight: { aspect: 1.04, waves: [[2, 0.055, 0.3], [3, 0.035, 1.2], [5, 0.018, 2.5]] },
-    harbor: { aspect: 0.8, waves: [[2, 0.09, 1.5], [4, 0.05, 0.2], [7, 0.03, 2.3]] },
-    crimson: { aspect: 1.16, waves: [[2, 0.07, 0.8], [3, 0.05, 2.1], [5, 0.02, 0.4]] },
-    skyline: { aspect: 0.82, waves: [[3, 0.1, 0.4], [5, 0.06, 2.2], [7, 0.035, 1.1]] },
+    midnight: { aspect: 1.04, waves: [[2, 0.055, 0.3], [3, 0.035, 1.2], [5, 0.018, 2.5], [9, 0.014, 0.8], [13, 0.008, 2.0]] },
+    harbor: { aspect: 0.8, waves: [[2, 0.09, 1.5], [4, 0.05, 0.2], [7, 0.03, 2.3], [11, 0.018, 1.1], [17, 0.01, 0.4]] },
+    crimson: { aspect: 1.16, waves: [[2, 0.07, 0.8], [3, 0.05, 2.1], [5, 0.02, 0.4], [8, 0.012, 1.7]] },
+    skyline: { aspect: 0.82, waves: [[3, 0.1, 0.4], [5, 0.06, 2.2], [7, 0.035, 1.1], [11, 0.02, 0.6], [17, 0.012, 1.4]] },
   };
 
   function buildTrackPath(def, N) {
@@ -2832,38 +2832,45 @@
       addQuad([[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]], mixRgb(color, [0, 0, 0], 0.3));
     };
     const section = (s) => {
-      const c = Math.min(74, s.w * 0.15);
+      const c = Math.min(72, s.w * 0.14);
       return [
-        [-s.w / 2, s.y1 - c, s.z], [-s.w / 2 + c, s.y1, s.z],
-        [s.w / 2 - c, s.y1, s.z], [s.w / 2, s.y1 - c, s.z],
-        [s.w / 2, s.y0 + c, s.z], [s.w / 2 - c, s.y0, s.z],
-        [-s.w / 2 + c, s.y0, s.z], [-s.w / 2, s.y0 + c, s.z],
+        [-s.w / 2, s.y1 - c, s.z], [-s.w / 2 + c * 0.55, s.y1 - c * 0.22, s.z],
+        [-s.w / 2 + c * 0.16, s.y1, s.z], [s.w / 2 - c * 0.16, s.y1, s.z],
+        [s.w / 2 - c * 0.55, s.y1 - c * 0.22, s.z], [s.w / 2, s.y1 - c, s.z],
+        [s.w / 2, s.y0 + c, s.z], [s.w / 2 - c * 0.5, s.y0 + c * 0.24, s.z],
+        [s.w / 2 - c, s.y0, s.z], [-s.w / 2 + c, s.y0, s.z],
+        [-s.w / 2 + c * 0.5, s.y0 + c * 0.24, s.z], [-s.w / 2, s.y0 + c, s.z],
       ];
     };
     const loft = (sections, colors) => {
       const rings = sections.map(section);
       for (let i = 0; i < rings.length - 1; i++) {
-        for (let j = 0; j < 8; j++) {
-          const j2 = (j + 1) % 8;
+        for (let j = 0; j < 12; j++) {
+          const j2 = (j + 1) % 12;
           addQuad([rings[i][j], rings[i][j2], rings[i + 1][j2], rings[i + 1][j]], colors[j]);
         }
       }
-      addFace(rings[0], mixRgb(colors[5], [0, 0, 0], 0.18));
-      addFace(rings[rings.length - 1].slice().reverse(), mixRgb(colors[1], [0, 0, 0], 0.1));
+      addFace(rings[0], mixRgb(colors[8], [0, 0, 0], 0.18));
+      addFace(rings[rings.length - 1].slice().reverse(), mixRgb(colors[2], [0, 0, 0], 0.1));
       return rings;
     };
+    const bodyTone = [bodySide, bodyLight, bodyLight, bodyLight, bodyLight, bodySide, bodySide, bodyDark, bodyDark, bodyDark, bodyDark, bodySide];
     const scaleW = def.id === 'nova' ? 1.05 : def.id === 'kaze' ? 0.95 : 1;
     const bodySections = [
-      { z: -625, w: 590, y0: 95, y1: 205 }, { z: -592, w: 680, y0: 68, y1: 292 },
-      { z: -525, w: 722, y0: 58, y1: 336 }, { z: -400, w: 728, y0: 52, y1: 352 },
-      { z: -300, w: 700, y0: 50, y1: 432 }, { z: -220, w: 590, y0: 48, y1: 552 },
-      { z: -90, w: 540, y0: 46, y1: 572 }, { z: 100, w: 540, y0: 46, y1: 572 },
-      { z: 210, w: 580, y0: 48, y1: 518 }, { z: 300, w: 660, y0: 50, y1: 368 },
-      { z: 455, w: 680, y0: 58, y1: 346 }, { z: 552, w: 640, y0: 68, y1: 292 },
-      { z: 616, w: 565, y0: 82, y1: 216 }, { z: 648, w: 470, y0: 102, y1: 162 },
+      { z: -625, w: 590, y0: 95, y1: 205 }, { z: -600, w: 660, y0: 72, y1: 270 },
+      { z: -560, w: 710, y0: 62, y1: 318 }, { z: -500, w: 728, y0: 56, y1: 340 },
+      { z: -430, w: 730, y0: 52, y1: 350 }, { z: -360, w: 720, y0: 50, y1: 385 },
+      { z: -295, w: 690, y0: 49, y1: 440 }, { z: -240, w: 620, y0: 48, y1: 520 },
+      { z: -200, w: 570, y0: 47, y1: 558 }, { z: -120, w: 540, y0: 46, y1: 572 },
+      { z: -40, w: 540, y0: 46, y1: 572 }, { z: 55, w: 540, y0: 46, y1: 572 },
+      { z: 135, w: 560, y0: 47, y1: 560 }, { z: 200, w: 590, y0: 48, y1: 525 },
+      { z: 255, w: 630, y0: 49, y1: 455 }, { z: 300, w: 665, y0: 50, y1: 368 },
+      { z: 390, w: 682, y0: 54, y1: 350 }, { z: 470, w: 680, y0: 58, y1: 342 },
+      { z: 540, w: 650, y0: 66, y1: 305 }, { z: 600, w: 590, y0: 78, y1: 240 },
+      { z: 640, w: 510, y0: 94, y1: 180 }, { z: 660, w: 440, y0: 108, y1: 150 },
     ];
     bodySections.forEach((s) => { s.w *= scaleW; });
-    loft(bodySections, [bodyLight, bodyLight, bodyLight, bodySide, bodyDark, bodyDark, bodyDark, bodySide]);
+    loft(bodySections, bodyTone);
 
     // Sloped glass surfaces over the single coupe roofline
     addQuad([[-232, 432, -300], [232, 432, -300], [218, 552, -220], [-218, 552, -220]], glass);
@@ -4520,6 +4527,24 @@
         }
         pushGLBox(gates, [a.x, a.y + 1640, a.z], right, forward, half * 3.25, 170, 160, gateDark);
         pushGLBox(gates, [a.x, a.y + 1550, a.z], right, forward, half * 3.05, 28, 80, accent);
+      }
+
+      if (idx === 40 || idx === Math.floor(TRACK_SEGMENTS * 0.58)) {
+        const right = [a.rx, 0, a.rz];
+        const forward = [-Math.sin(a.heading), 0, Math.cos(a.heading)];
+        const deckY = a.y + 1900;
+        // Elevated flyover crossing above the main road
+        pushGLBox(gates, [a.x, deckY, a.z], right, forward, 8200, 240, 1600, roadB);
+        pushGLBox(gates, [a.x, deckY + 140, a.z], right, forward, 8200, 16, 1280, roadA);
+        pushGLBox(gates, [a.x + forward[0] * -700, deckY + 165, a.z + forward[2] * -700], right, forward, 8200, 100, 60, accent);
+        pushGLBox(gates, [a.x + forward[0] * 700, deckY + 165, a.z + forward[2] * 700], right, forward, 8200, 100, 60, accent);
+        pushGLBox(gates, [a.x, deckY - 140, a.z], right, forward, 7600, 28, 90, accent);
+        for (const side of [-1, 1]) {
+          const pillarX = a.x + right[0] * side * 3300;
+          const pillarZ = a.z + right[2] * side * 3300;
+          pushGLBox(gates, [pillarX, a.y + 930, pillarZ], right, forward, 320, 1860, 320, gateDark);
+          pushGLBox(gates, [pillarX, deckY + 20, pillarZ], right, forward, 500, 70, 500, accent);
+        }
       }
     }
 
@@ -7350,7 +7375,7 @@
   applyRenderer();
   resize();
   if (forcedRenderer === 'webgl' && useWebGL) {
-    setTimeout(() => showToast('WEBGL 3D ACTIVE · 开罗狂飙 v8.2', 2600, true), 700);
+    setTimeout(() => showToast('WEBGL 3D ACTIVE · 开罗狂飙 v8.3', 2600, true), 700);
   }
 
   applyTrack(selectedTrackId, true);
