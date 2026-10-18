@@ -652,6 +652,7 @@
   const RACER_COUNT = 6;
   const MAX_KMH = 500;
   const WALL_LIMIT = 1.27;
+  const APP_VERSION = '7.0.1';
 
   const QUALITY_PRESETS = {
     high: { drawDistance: 300, dpr: 2, particles: 1, label: '高' },
@@ -2488,6 +2489,7 @@
     setCamera: $('setCamera'),
     setQuality: $('setQuality'),
     setRenderer: $('setRenderer'),
+    rendererStatus: $('rendererStatus'),
     setAutoThrottle: $('setAutoThrottle'),
     installAppBtn: $('installAppBtn'),
     installHint: $('installHint'),
@@ -3624,6 +3626,10 @@
     if (requested === 'webgl' && !useWebGL) showToast('WEBGL 不可用 · 已回退到 2D', 2400, true);
     if (glCanvas) glCanvas.classList.toggle('is-hidden', !useWebGL);
     if (useWebGL) resizeGL();
+    if (ui.rendererStatus) {
+      ui.rendererStatus.classList.toggle('fallback', !useWebGL);
+      ui.rendererStatus.innerHTML = `当前渲染器：<b>${useWebGL ? 'WEBGL 3D' : 'CANVAS 2D'}</b> · v${APP_VERSION}`;
+    }
   }
 
   function resizeGL() {
@@ -6666,10 +6672,18 @@
 
   /* --------------------------------- Boot ----------------------------------- */
 
+  const urlParams = new URLSearchParams(location.search);
+  const forcedRenderer = urlParams.get('renderer') || (urlParams.get('webgl') === '1' ? 'webgl' : null);
+  if (forcedRenderer === 'webgl' || forcedRenderer === 'canvas') {
+    profile.settings.renderer = forcedRenderer;
+  }
   initWebGL();
   applyQuality();
   applyRenderer();
   resize();
+  if (forcedRenderer === 'webgl' && useWebGL) {
+    setTimeout(() => showToast('WEBGL 3D ACTIVE · v7.0.1', 2600, true), 700);
+  }
   applyTrack(selectedTrackId, true);
   applyCarSelection(selectedCarId);
   const legacyRecord = getTrackRecord('midnight');

@@ -1,10 +1,10 @@
 /* NIGHTSHIFT service worker — offline shell for the static game. */
-const CACHE_NAME = 'nightshift-7.0.0';
+const CACHE_NAME = 'nightshift-7.0.1';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css',
-  './game.js',
+  './styles.css?v=7.0.1',
+  './game.js?v=7.0.1',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
@@ -40,7 +40,10 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  if (request.mode === 'navigate') {
+  const isCore = request.destination === 'script' || request.destination === 'style' ||
+    url.pathname.endsWith('.js') || url.pathname.endsWith('.css');
+
+  if (request.mode === 'navigate' || isCore) {
     event.respondWith(
       fetch(request)
         .then((response) => {
@@ -48,7 +51,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match('./index.html')))
+        .catch(() => caches.match(request).then((cached) => cached || (request.mode === 'navigate' ? caches.match('./index.html') : Response.error())))
     );
     return;
   }

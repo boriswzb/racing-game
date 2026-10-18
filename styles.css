@@ -1298,6 +1298,9 @@ kbd {
 .switch input:checked + i::after { transform: translateX(19px); background: var(--cyan); box-shadow: 0 0 9px rgba(39, 230, 255, 0.6); }
 .volume-row input[type="range"] { width: 170px; accent-color: var(--pink); cursor: pointer; }
 .settings-hint { display: flex; flex-direction: column; gap: 4px; margin: 15px 0 5px; color: rgba(255, 255, 255, 0.27); font-size: 8px; line-height: 1.7; letter-spacing: 0.04em; }
+.renderer-status { margin-top: 7px; padding: 6px 9px; border: 1px solid rgba(39, 230, 255, 0.18); background: rgba(39, 230, 255, 0.045); color: rgba(255, 255, 255, 0.4); font-size: 8px; letter-spacing: 0.04em; }
+.renderer-status b { color: var(--cyan); font-family: var(--display); font-size: 11px; font-style: italic; letter-spacing: 0.04em; }
+.renderer-status.fallback b { color: var(--amber); }
 .settings-card .modal-actions { margin-top: 16px; }
 
 .install-row {
