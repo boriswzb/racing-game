@@ -689,7 +689,7 @@
   const RACER_COUNT = 6;
   const MAX_KMH = 500;
   const WALL_LIMIT = 1.27;
-  const APP_VERSION = '8.1';
+  const APP_VERSION = '8.2';
 
   const QUALITY_PRESETS = {
     high: { drawDistance: 300, dpr: 2, particles: 1, label: '高' },
@@ -2805,16 +2805,21 @@
     if (garageModelCache.has(key)) return garageModelCache.get(key);
     const def = CAR_BY_ID[carId] || CAR_BY_ID.vanta;
     const body = hexToRgb(paint);
+    const bodyLight = mixRgb(body, [255, 255, 255], 0.2);
+    const bodySide = mixRgb(body, [0, 0, 0], 0.16);
+    const bodyDark = mixRgb(body, [0, 0, 0], 0.55);
     const accent = hexToRgb(def.accent);
-    const dark = mixRgb(body, [8, 5, 10], 0.66);
-    const glass = [7, 8, 18];
-    const tire = [8, 7, 10];
+    const glass = [9, 12, 24];
+    const tire = [9, 9, 12];
+    const carbon = [13, 10, 16];
     const faces = [];
-    const addQuad = (pts, color, glow = false) => {
+    const addFace = (pts, color, glow = false) => {
       const normal = faceNormal(pts);
       if (!normal) return;
       faces.push({ pts, color, glow, normal });
     };
+    const addQuad = (pts, color, glow = false) => addFace(pts, color, glow);
+    const addTri = (pts, color, glow = false) => addFace(pts, color, glow);
     const addBox = (cx, cy, cz, w, h, d, color, glow = false) => {
       const x0 = cx - w / 2, x1 = cx + w / 2;
       const y0 = cy - h / 2, y1 = cy + h / 2;
@@ -2823,50 +2828,126 @@
       addQuad([[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], mixRgb(color, [0, 0, 0], 0.5));
       addQuad([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]], color, glow);
       addQuad([[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]], mixRgb(color, [0, 0, 0], 0.2));
-      addQuad([[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]], mixRgb(color, [0, 0, 0], 0.28));
-      addQuad([[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]], mixRgb(color, [0, 0, 0], 0.28));
+      addQuad([[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]], mixRgb(color, [0, 0, 0], 0.3));
+      addQuad([[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]], mixRgb(color, [0, 0, 0], 0.3));
     };
-    const scaleW = def.id === 'nova' ? 1.06 : def.id === 'kaze' ? 0.94 : 1;
-    const profile = [
-      { z: -580, y: 70, w: 680, c: dark }, { z: -580, y: 245, w: 680, c: dark },
-      { z: -540, y: 315, w: 670, c: body }, { z: -390, y: 330, w: 670, c: body },
-      { z: -295, y: 500, w: 590, c: glass }, { z: -190, y: 555, w: 535, c: body },
-      { z: 155, y: 555, w: 535, c: body }, { z: 265, y: 490, w: 590, c: glass },
-      { z: 370, y: 345, w: 640, c: body }, { z: 515, y: 325, w: 655, c: body },
-      { z: 570, y: 250, w: 625, c: body }, { z: 570, y: 85, w: 650, c: dark },
-      { z: 450, y: 52, w: 680, c: dark }, { z: -450, y: 52, w: 680, c: dark },
+    const section = (s) => {
+      const c = Math.min(74, s.w * 0.15);
+      return [
+        [-s.w / 2, s.y1 - c, s.z], [-s.w / 2 + c, s.y1, s.z],
+        [s.w / 2 - c, s.y1, s.z], [s.w / 2, s.y1 - c, s.z],
+        [s.w / 2, s.y0 + c, s.z], [s.w / 2 - c, s.y0, s.z],
+        [-s.w / 2 + c, s.y0, s.z], [-s.w / 2, s.y0 + c, s.z],
+      ];
+    };
+    const loft = (sections, colors) => {
+      const rings = sections.map(section);
+      for (let i = 0; i < rings.length - 1; i++) {
+        for (let j = 0; j < 8; j++) {
+          const j2 = (j + 1) % 8;
+          addQuad([rings[i][j], rings[i][j2], rings[i + 1][j2], rings[i + 1][j]], colors[j]);
+        }
+      }
+      addFace(rings[0], mixRgb(colors[5], [0, 0, 0], 0.18));
+      addFace(rings[rings.length - 1].slice().reverse(), mixRgb(colors[1], [0, 0, 0], 0.1));
+      return rings;
+    };
+    const scaleW = def.id === 'nova' ? 1.05 : def.id === 'kaze' ? 0.95 : 1;
+    const bodySections = [
+      { z: -625, w: 590, y0: 95, y1: 205 }, { z: -592, w: 680, y0: 68, y1: 292 },
+      { z: -525, w: 722, y0: 58, y1: 336 }, { z: -400, w: 728, y0: 52, y1: 352 },
+      { z: -300, w: 700, y0: 50, y1: 432 }, { z: -220, w: 590, y0: 48, y1: 552 },
+      { z: -90, w: 540, y0: 46, y1: 572 }, { z: 100, w: 540, y0: 46, y1: 572 },
+      { z: 210, w: 580, y0: 48, y1: 518 }, { z: 300, w: 660, y0: 50, y1: 368 },
+      { z: 455, w: 680, y0: 58, y1: 346 }, { z: 552, w: 640, y0: 68, y1: 292 },
+      { z: 616, w: 565, y0: 82, y1: 216 }, { z: 648, w: 470, y0: 102, y1: 162 },
     ];
-    profile.forEach((p) => { p.w *= scaleW; });
+    bodySections.forEach((s) => { s.w *= scaleW; });
+    loft(bodySections, [bodyLight, bodyLight, bodyLight, bodySide, bodyDark, bodyDark, bodyDark, bodySide]);
+
+    // Sloped glass surfaces over the single coupe roofline
+    addQuad([[-232, 432, -300], [232, 432, -300], [218, 552, -220], [-218, 552, -220]], glass);
+    addQuad([[-238, 572, -90], [238, 572, -90], [238, 572, 100], [-238, 572, 100]], bodyLight);
+    addQuad([[-240, 572, 100], [240, 572, 100], [294, 368, 300], [-294, 368, 300]], glass);
     for (const side of [-1, 1]) {
-      for (let i = 1; i < profile.length - 1; i++) {
-        const a = profile[0], b = profile[i], c = profile[i + 1];
-        addQuad([[side * a.w / 2, a.y, a.z], [side * b.w / 2, b.y, b.z], [side * c.w / 2, c.y, c.z], [side * a.w / 2, a.y, a.z]], side < 0 ? dark : mixRgb(body, [0, 0, 0], 0.12));
+      addQuad([[side * 302, 390, -270], [side * 286, 535, -215], [side * 286, 535, 90], [side * 308, 405, 190]], glass);
+      addQuad([[side * 306, 405, 190], [side * 286, 535, 90], [side * 286, 535, -215], [side * 302, 390, -270]], [16, 18, 34]);
+      addBox(side * 280 * scaleW, 572, 5, 480, 4, 180, mixRgb(body, [0, 0, 0], 0.18));
+    }
+
+    // Side skirts, shoulder line and mirrors
+    for (const side of [-1, 1]) {
+      addBox(side * 354 * scaleW, 96, -10, 36, 48, 720, carbon);
+      addBox(side * 360 * scaleW, 302, -20, 7, 9, 700, accent, true);
+      addBox(side * 390 * scaleW, 448, 188, 82, 24, 104, bodySide);
+      addBox(side * 424 * scaleW, 448, 210, 10, 18, 52, accent, true);
+      addBox(side * 363 * scaleW, 250, 60, 3, 150, 4, mixRgb(body, [0, 0, 0], 0.45));
+      addBox(side * 370 * scaleW, 250, -130, 8, 58, 160, carbon);
+      addBox(side * 371 * scaleW, 250, -130, 2, 34, 118, accent, true);
+    }
+
+    const addWheel = (side, z) => {
+      const cx = side * 356 * scaleW;
+      const cy = 122;
+      const r = 124;
+      const halfW = 58;
+      const n = 16;
+      const xIn = cx - side * halfW;
+      const xOut = cx + side * halfW;
+      const ring = [];
+      for (let i = 0; i < n; i++) {
+        const a = i / n * Math.PI * 2;
+        ring.push([cy + Math.cos(a) * r, z + Math.sin(a) * r]);
       }
-    }
-    for (let i = 0; i < profile.length; i++) {
-      const a = profile[i], b = profile[(i + 1) % profile.length];
-      addQuad([[-a.w / 2, a.y, a.z], [a.w / 2, a.y, a.z], [b.w / 2, b.y, b.z], [-b.w / 2, b.y, b.z]], i === profile.length - 1 ? dark : a.c);
-    }
-    for (const side of [-1, 1]) {
-      addQuad([[side * 305, 375, -295], [side * 282, 525, -190], [side * 282, 525, 155], [side * 305, 375, 250]], glass);
-      addBox(side * 335 * scaleW, 300, 0, 5, 8, 760, accent, true);
-      addBox(side * 300, 315, 552, 42, 25, 18, accent, true);
-    }
-    for (const side of [-1, 1]) {
-      for (const z of [-365, 355]) {
-        addBox(side * 350 * scaleW, 116, z, 132, 226, 278, tire);
-        addBox(side * 420 * scaleW, 116, z, 18, 112, 120, accent, true);
+      for (let i = 0; i < n; i++) {
+        const p = ring[i], q = ring[(i + 1) % n];
+        addQuad([[xIn, p[0], p[1]], [xOut, p[0], p[1]], [xOut, q[0], q[1]], [xIn, q[0], q[1]]], tire);
+        addTri([[xOut, cy, z], [xOut, p[0], p[1]], [xOut, q[0], q[1]]], tire);
+        addTri([[xIn, cy, z], [xIn, q[0], q[1]], [xIn, p[0], p[1]]], tire);
       }
+      for (let i = 0; i < n; i++) {
+        const p = ring[i], q = ring[(i + 1) % n];
+        const rr = 0.56;
+        const p1 = [cy + (p[0] - cy) * rr, z + (p[1] - z) * rr];
+        const q1 = [cy + (q[0] - cy) * rr, z + (q[1] - z) * rr];
+        addTri([[xOut + side * 2, cy, z], [xOut + side * 2, p1[0], p1[1]], [xOut + side * 2, q1[0], q1[1]]], accent, true);
+      }
+    };
+    addWheel(-1, -382); addWheel(1, -382); addWheel(-1, 378); addWheel(1, 378);
+
+    const addFender = (side, z) => {
+      const n = 9;
+      const r = 151;
+      const x0 = side * 422;
+      const x1 = side * 442;
+      for (let i = 0; i < n; i++) {
+        const a0 = Math.PI * i / n;
+        const a1 = Math.PI * (i + 1) / n;
+        addQuad([
+          [x0, 122 + Math.sin(a0) * r, z + Math.cos(a0) * r],
+          [x1, 122 + Math.sin(a0) * r, z + Math.cos(a0) * r],
+          [x1, 122 + Math.sin(a1) * r, z + Math.cos(a1) * r],
+          [x0, 122 + Math.sin(a1) * r, z + Math.cos(a1) * r],
+        ], i % 2 ? body : bodyLight);
+      }
+    };
+    for (const side of [-1, 1]) { addFender(side, -382); addFender(side, 378); }
+
+    const wingW = (def.id === 'nova' ? 840 : def.id === 'kaze' ? 680 : 770) * scaleW;
+    addBox(0, 425, -570, wingW, 25, 120, carbon);
+    addBox(0, 442, -570, wingW * 0.94, 5, 28, accent, true);
+    for (const side of [-1, 1]) addBox(side * (wingW / 2 - 62), 380, -548, 22, 92, 72, carbon);
+    addBox(0, 275, -630, 500 * scaleW, 50, 18, accent, true);
+    addBox(0, 205, -636, 400 * scaleW, 28, 14, mixRgb(accent, [0, 0, 0], 0.4), true);
+    addBox(0, 105, -630, 560 * scaleW, 45, 22, carbon);
+    addBox(0, 300, 640, 430 * scaleW, 46, 18, accent, true);
+    addBox(0, 205, 646, 450 * scaleW, 32, 18, carbon);
+    for (const side of [-1, 1]) {
+      addBox(side * 158, 120, -640, 62, 34, 18, accent, true);
+      addBox(side * 245, 250, 640, 70, 26, 14, [255, 245, 210], true);
     }
-    const wingW = (def.id === 'nova' ? 850 : def.id === 'kaze' ? 680 : 790) * scaleW;
-    addBox(0, 390, -555, wingW, 32, 116, dark);
-    addBox(0, 410, -555, wingW * 0.92, 7, 28, accent, true);
-    for (const side of [-1, 1]) addBox(side * (wingW / 2 - 66), 340, -535, 26, 105, 66, dark);
-    addBox(0, 260, -585, 510 * scaleW, 58, 20, accent, true);
-    addBox(0, 170, -592, 420 * scaleW, 42, 20, mixRgb(accent, [0, 0, 0], 0.3), true);
-    addBox(0, 88, -578, 550 * scaleW, 54, 28, tire);
-    for (const side of [-1, 1]) addBox(side * 158, 120, -605, 68, 40, 24, accent, true);
-    const model = { faces, width: 680 * scaleW, height: 610, length: 1160 };
+
+    const model = { faces, width: 720 * scaleW, height: 600, length: 1280 };
     garageModelCache.set(key, model);
     return model;
   }
@@ -7269,7 +7350,7 @@
   applyRenderer();
   resize();
   if (forcedRenderer === 'webgl' && useWebGL) {
-    setTimeout(() => showToast('WEBGL 3D ACTIVE · 开罗狂飙 v8.1', 2600, true), 700);
+    setTimeout(() => showToast('WEBGL 3D ACTIVE · 开罗狂飙 v8.2', 2600, true), 700);
   }
 
   applyTrack(selectedTrackId, true);
