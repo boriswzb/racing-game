@@ -21,7 +21,7 @@
       <div class="hud-corner hud-tl">
         <div class="stat-block">
           <span class="stat-label">LAP</span>
-          <div class="stat-value"><b id="lapValue">1</b><small>/3</small></div>
+          <div class="stat-value"><b id="lapValue">1</b><small id="lapTotal">/3</small></div>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-block">
@@ -31,9 +31,16 @@
       </div>
 
       <div class="race-clock">
-        <span class="clock-kicker">RACE TIME</span>
+        <span class="clock-kicker" id="modeLabel">QUICK RACE</span>
         <b id="raceTime">00:00.000</b>
         <span class="lap-time">LAP <em id="lapTime">00:00.000</em></span>
+        <span class="event-label" id="eventLabel">MIDNIGHT LOOP</span>
+      </div>
+
+      <div class="minimap-panel">
+        <div class="map-head"><span id="mapTrackName">MIDNIGHT LOOP</span><em>LIVE</em></div>
+        <canvas id="minimap" width="360" height="220" aria-hidden="true"></canvas>
+        <div class="map-fade"></div>
       </div>
 
       <div class="hud-corner hud-tr">
@@ -50,7 +57,8 @@
         <div id="lbRows" class="lb-rows"></div>
       </aside>
 
-      <div class="speed-cluster">
+        <div class="speed-cluster">
+        <div id="slipstreamBadge" class="slipstream-badge">SLIPSTREAM</div>
         <div class="speed-dial">
           <svg class="dial-svg" viewBox="0 0 220 220" aria-hidden="true">
             <circle class="dial-guide" cx="110" cy="110" r="88" pathLength="100"></circle>
@@ -70,14 +78,23 @@
         </div>
       </div>
 
-      <div class="best-lap-card">
-        <span>BEST LAP</span>
-        <b id="bestLapHud">--:--.---</b>
+      <div class="race-data-card">
+        <div class="sector-row">
+          <span class="sector" data-sector="0"><i>S1</i><b id="sector1">--.--</b></span>
+          <span class="sector" data-sector="1"><i>S2</i><b id="sector2">--.--</b></span>
+          <span class="sector" data-sector="2"><i>S3</i><b id="sector3">--.--</b></span>
+        </div>
+        <div class="delta-row"><span>DELTA</span><b id="deltaValue">--.---</b></div>
+        <div class="best-lap-card">
+          <span>BEST LAP</span>
+          <b id="bestLapHud">--:--.---</b>
+        </div>
       </div>
     </section>
 
     <!-- 倒计时 -->
     <div id="countdown" class="countdown is-hidden" aria-live="assertive">
+      <div class="start-lights" id="startLights"><i></i><i></i><i></i><i></i><i></i></div>
       <div id="countdownNum" class="countdown-num">3</div>
       <div id="countdownSub" class="countdown-sub">HOLD THE LINE</div>
     </div>
@@ -95,6 +112,15 @@
           <span>NIGHT DIVISION // 2088</span>
         </div>
 
+        <div class="profile-chip" id="profileChip">
+          <span>GARAGE</span>
+          <b id="profileCoins">400</b>
+          <small>CR</small>
+          <i></i>
+          <span>WINS</span>
+          <b id="profileWins">0</b>
+        </div>
+
         <div class="title-wrap">
           <div class="title-kicker">THE CITY NEVER SLEEPS</div>
           <h1 class="game-title" data-text="NIGHTSHIFT">NIGHTSHIFT</h1>
@@ -109,10 +135,21 @@
             <span class="start-arrow">→</span>
           </button>
           <div class="menu-meta">
-            <div class="meta-item"><span>赛道</span><b>午夜环线</b></div>
-            <div class="meta-item"><span>圈数</span><b>3 LAPS</b></div>
-            <div class="meta-item"><span>对手</span><b>5 RACERS</b></div>
+            <div class="meta-item"><span>模式</span><b>QUICK RACE</b></div>
+            <div class="meta-item"><span>赛道</span><b id="menuTrackName">午夜环线</b></div>
+            <div class="meta-item"><span>赛车</span><b id="menuCarName">VANTA RS</b></div>
           </div>
+        </div>
+
+        <div class="menu-subactions">
+          <button id="careerBtn" class="subaction-btn" type="button">
+            <span class="subaction-icon">★</span>
+            <span><small>CAREER</small><b>生涯模式</b></span>
+          </button>
+          <button id="settingsBtn" class="subaction-btn" type="button">
+            <span class="subaction-icon">⚙</span>
+            <span><small>OPTIONS</small><b>设置</b></span>
+          </button>
         </div>
 
         <div class="menu-footer">
@@ -120,6 +157,7 @@
             <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> 驾驶</span>
             <span><kbd>SPACE</kbd> 氮气</span>
             <span><kbd>P</kbd> 暂停</span>
+            <span><b class="pad-hint">PAD</b> 手柄已支持</span>
           </div>
           <div class="record-chip">
             <span>BEST LAP</span>
@@ -128,6 +166,153 @@
         </div>
 
         <div class="menu-side-note">LOCAL SAVE · NO DOWNLOADS<br>BEST EXPERIENCED WITH SOUND ON</div>
+      </div>
+    </section>
+
+    <!-- 快速比赛设置 -->
+    <section id="setupScreen" class="screen subpage setup-screen is-hidden">
+      <div class="subpage-shell">
+        <header class="subpage-head">
+          <button id="setupBackBtn" class="back-btn" type="button"><span>←</span> 主菜单</button>
+          <div class="subpage-title">
+            <span>QUICK RACE</span>
+            <h2>选择赛道与赛车</h2>
+          </div>
+          <div class="wallet">
+            <span>CREDITS</span>
+            <b id="setupCoins">400</b>
+            <small>CR</small>
+          </div>
+        </header>
+
+        <div class="setup-body">
+          <section class="setup-section">
+            <div class="section-head">
+              <h3><i>01</i> 赛道</h3>
+              <p>四条风格与节奏完全不同的环线</p>
+            </div>
+            <div id="trackGrid" class="track-grid"></div>
+          </section>
+
+          <section class="setup-section">
+            <div class="section-head">
+              <h3><i>02</i> 赛车</h3>
+              <p>不同的极速、加速、抓地与氮气特性</p>
+            </div>
+            <div id="carGrid" class="car-grid"></div>
+          </section>
+        </div>
+
+        <footer class="setup-footer">
+          <div class="setup-summary">
+            <span>SELECTED RACE</span>
+            <b id="setupSummary">MIDNIGHT LOOP · VANTA RS</b>
+            <small id="setupSub">3 LAPS · 5 RIVALS · STANDARD</small>
+          </div>
+          <button id="setupStartBtn" class="start-btn setup-start" type="button">
+            <span class="start-glow"></span>
+            <span class="start-copy"><small>IGNITION</small><b>发车</b></span>
+            <span class="start-arrow">→</span>
+          </button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- 生涯模式 -->
+    <section id="careerScreen" class="screen subpage career-screen is-hidden">
+      <div class="subpage-shell">
+        <header class="subpage-head">
+          <button id="careerBackBtn" class="back-btn" type="button"><span>←</span> 主菜单</button>
+          <div class="subpage-title">
+            <span>CAREER / NIGHT DIVISION</span>
+            <h2>午夜联赛</h2>
+          </div>
+          <div class="wallet">
+            <span>CREDITS</span>
+            <b id="careerCoins">400</b>
+            <small>CR</small>
+          </div>
+        </header>
+
+        <div class="career-summary" id="careerSummary"></div>
+        <div class="career-loadout" id="careerLoadout"></div>
+        <div class="career-list" id="careerList"></div>
+      </div>
+    </section>
+
+    <!-- 设置 -->
+    <section id="settingsScreen" class="screen center-screen settings-screen is-hidden">
+      <div class="modal-card settings-card">
+        <div class="settings-head">
+          <div>
+            <div class="modal-eyebrow">SYSTEM CONFIG</div>
+            <h2>设置</h2>
+          </div>
+          <button id="settingsCloseBtn" class="icon-btn settings-close" type="button" aria-label="关闭设置">×</button>
+        </div>
+
+        <div class="settings-grid">
+          <label class="setting-row">
+            <span><b>难度</b><small>AI 速度与失误率</small></span>
+            <select id="setDifficulty">
+              <option value="rookie">新手</option>
+              <option value="standard">标准</option>
+              <option value="pro">硬核</option>
+            </select>
+          </label>
+
+          <label class="setting-row">
+            <span><b>转向辅助</b><small>帮助车辆回到赛车线</small></span>
+            <select id="setAssist">
+              <option value="off">关闭</option>
+              <option value="low">轻度</option>
+              <option value="high">强力</option>
+            </select>
+          </label>
+
+          <label class="setting-row">
+            <span><b>镜头</b><small>追车镜头距离</small></span>
+            <select id="setCamera">
+              <option value="near">近景</option>
+              <option value="far">远景</option>
+            </select>
+          </label>
+
+          <label class="setting-row">
+            <span><b>自动油门</b><small>发车后自动加速，适合触屏</small></span>
+            <span class="switch"><input id="setAutoThrottle" type="checkbox"><i></i></span>
+          </label>
+
+          <label class="setting-row">
+            <span><b>幽灵车</b><small>显示本赛道最快纪录回放</small></span>
+            <span class="switch"><input id="setGhost" type="checkbox"><i></i></span>
+          </label>
+
+          <label class="setting-row volume-row">
+            <span><b>主音量</b><small>Master</small></span>
+            <input id="setMaster" type="range" min="0" max="100" step="1" value="80">
+          </label>
+
+          <label class="setting-row volume-row">
+            <span><b>音乐</b><small>Synthwave</small></span>
+            <input id="setMusic" type="range" min="0" max="100" step="1" value="65">
+          </label>
+
+          <label class="setting-row volume-row">
+            <span><b>引擎 / 音效</b><small>Engine & SFX</small></span>
+            <input id="setEngine" type="range" min="0" max="100" step="1" value="85">
+          </label>
+        </div>
+
+        <div class="settings-hint">
+          <span>手柄：左摇杆转向 · RT 油门 · LT 刹车 · A 氮气 · Start 暂停</span>
+          <span>键盘：WASD / 方向键 · Space 氮气 · P 暂停</span>
+        </div>
+
+        <div class="modal-actions">
+          <button id="settingsResetBtn" class="ghost-btn" type="button">恢复默认</button>
+          <button id="settingsDoneBtn" class="primary-btn" type="button">完成</button>
+        </div>
       </div>
     </section>
 
@@ -140,6 +325,7 @@
         <div class="modal-actions vertical">
           <button id="resumeBtn" class="primary-btn" type="button">继续比赛</button>
           <button id="pauseRestartBtn" class="ghost-btn" type="button">重新开始</button>
+          <button id="pauseSettingsBtn" class="ghost-btn" type="button">设置</button>
           <button id="quitBtn" class="ghost-btn" type="button">返回主菜单</button>
         </div>
         <div class="modal-key-hint"><kbd>P</kbd> / <kbd>ESC</kbd> 继续</div>
@@ -161,6 +347,7 @@
           <div><span>最快单圈</span><b id="resultBestLap">00:00.000</b></div>
           <div><span>最高时速</span><b id="resultTopSpeed">0 <small>KM/H</small></b></div>
         </div>
+        <div class="result-extra" id="resultExtra"></div>
         <div class="result-bars" id="resultBars"></div>
         <div class="modal-actions">
           <button id="replayBtn" class="primary-btn" type="button">再跑一次</button>
