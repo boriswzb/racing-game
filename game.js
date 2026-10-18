@@ -652,7 +652,7 @@
   const RACER_COUNT = 6;
   const MAX_KMH = 500;
   const WALL_LIMIT = 1.27;
-  const APP_VERSION = '7.0.1';
+  const APP_VERSION = '7.1';
 
   const QUALITY_PRESETS = {
     high: { drawDistance: 300, dpr: 2, particles: 1, label: '高' },
@@ -3690,6 +3690,36 @@
     pushGLVertex(arr, p4[0], p4[1], p4[2], color);
   }
 
+  function pushGLBox(out, center, right, forward, w, h, d, color) {
+    const x = w / 2;
+    const y = h / 2;
+    const z = d / 2;
+    const world = (lx, ly, lz) => [
+      center[0] + right[0] * lx + forward[0] * lz,
+      center[1] + ly,
+      center[2] + right[2] * lx + forward[2] * lz,
+    ];
+    const p000 = world(-x, -y, -z);
+    const p001 = world(-x, -y, z);
+    const p010 = world(-x, y, -z);
+    const p011 = world(-x, y, z);
+    const p100 = world(x, -y, -z);
+    const p101 = world(x, -y, z);
+    const p110 = world(x, y, -z);
+    const p111 = world(x, y, z);
+    pushGLQuad(out, p010, p110, p111, p011, color);
+    pushGLQuad(out, p000, p100, p101, p001, color);
+    pushGLQuad(out, p000, p100, p110, p010, color);
+    pushGLQuad(out, p001, p101, p111, p011, color);
+    pushGLQuad(out, p000, p001, p011, p010, color);
+    pushGLQuad(out, p100, p101, p111, p110, color);
+  }
+
+  function glLocalQuad(out, p1, p2, p3, p4, color) {
+    const vertices = [p1, p2, p3, p1, p3, p4];
+    for (const p of vertices) out.push(p[0], p[1], p[2], color[0], color[1], color[2]);
+  }
+
   function glCamera() {
     const car = trackPointAt(player.progress);
     const half = ROAD_WIDTH / 2;
@@ -3819,6 +3849,8 @@
     const start = baseIdx - 9;
     const opaque = [];
     const barriers = [];
+    const gates = [];
+    const gateDark = [0.012, 0.008, 0.026];
 
     const groundColor = glHex(currentTheme.ground[1]);
     const groundY = -1250;
@@ -3911,9 +3943,25 @@
       pushGLQuad(barriers,
         wallA2, [wallA2[0], wallA2[1] + 280, wallA2[2]],
         [wallB2[0], wallB2[1] + 280, wallB2[2]], wallB2, accent);
+
+      if (idx === 0 || idx % 300 === 150) {
+        const right = [a.rx, 0, a.rz];
+        const forward = [-Math.sin(a.heading), 0, Math.cos(a.heading)];
+        for (const side of [-1, 1]) {
+          pushGLBox(gates,
+            [a.x + right[0] * side * half * 1.6, a.y + 800, a.z + right[2] * side * half * 1.6],
+            right, forward, 110, 1600, 110, gateDark);
+          pushGLBox(gates,
+            [a.x + right[0] * side * half * 1.6, a.y + 1530, a.z + right[2] * side * half * 1.6],
+            right, forward, 24, 800, 24, accent);
+        }
+        pushGLBox(gates, [a.x, a.y + 1640, a.z], right, forward, half * 3.25, 170, 160, gateDark);
+        pushGLBox(gates, [a.x, a.y + 1550, a.z], right, forward, half * 3.05, 28, 80, accent);
+      }
     }
 
     drawGLColor(opaque, 1);
+    drawGLColor(gates, 1);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
@@ -3940,6 +3988,7 @@
       }
     }
 
+    const shadows = [];
     const addCar = (sprite, p, x, alpha = 1) => {
       if (!sprite || !p) return;
       const texture = createGLTexture(sprite);
@@ -3948,6 +3997,20 @@
       const h = w * (sprite.height / sprite.width);
       const center = [p.x + p.rx * x * half, p.y + h / 2 + 20, p.z + p.rz * x * half];
       billboards.push({ texture, center, w, h, alpha, dist: camDist(center[0], center[1], center[2]) });
+      const fx = -Math.sin(p.heading);
+      const fz = Math.cos(p.heading);
+      const cx = p.x + p.rx * x * half;
+      const cz = p.z + p.rz * x * half;
+      const sw = 1000;
+      const sl = 1900;
+      const y = p.y + 5;
+      glLocalQuad(shadows,
+        [cx - p.rx * sw / 2 - fx * sl / 2, y, cz - p.rz * sw / 2 - fz * sl / 2],
+        [cx + p.rx * sw / 2 - fx * sl / 2, y, cz + p.rz * sw / 2 - fz * sl / 2],
+        [cx + p.rx * sw / 2 + fx * sl / 2, y, cz + p.rz * sw / 2 + fz * sl / 2],
+        [cx - p.rx * sw / 2 + fx * sl / 2, y, cz - p.rz * sw / 2 + fz * sl / 2],
+        [0, 0, 0]
+      );
     };
     for (const ai of opponents) {
       if (ai.finished) continue;
@@ -3957,6 +4020,12 @@
     if (race.ghost && race.ghost.visible) {
       addCar(carSprites[race.ghost.carId] || carSprites.vanta, trackPointAt(race.ghost.p), race.ghost.x, 0.4);
     }
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    drawGLColor(shadows, 0.4);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
     drawGLBillboards(billboards);
     gl.depthMask(true);
     gl.disable(gl.BLEND);
@@ -6682,7 +6751,7 @@
   applyRenderer();
   resize();
   if (forcedRenderer === 'webgl' && useWebGL) {
-    setTimeout(() => showToast('WEBGL 3D ACTIVE · v7.0.1', 2600, true), 700);
+    setTimeout(() => showToast('WEBGL 3D ACTIVE · v7.1', 2600, true), 700);
   }
   applyTrack(selectedTrackId, true);
   applyCarSelection(selectedCarId);
