@@ -390,9 +390,42 @@
         <div class="result-extra" id="resultExtra"></div>
         <div class="result-bars" id="resultBars"></div>
         <div class="modal-actions">
+          <button id="watchReplayBtn" class="ghost-btn" type="button" style="display:none">观看回放</button>
           <button id="replayBtn" class="primary-btn" type="button">再跑一次</button>
           <button id="menuBtn" class="ghost-btn" type="button">返回主菜单</button>
         </div>
+      </div>
+    </section>
+
+    <!-- 赛事回放 -->
+    <section id="replayScreen" class="replay-screen is-hidden" aria-live="off">
+      <div class="replay-top">
+        <div class="replay-title">
+          <span>RACE REPLAY</span>
+          <b id="replayTrackName">MIDNIGHT LOOP</b>
+          <small id="replayCarName">VANTA RS</small>
+        </div>
+        <div class="replay-clock">
+          <b id="replayClock">00:00.000</b>
+          <i>/</i>
+          <span id="replayDuration">00:00.000</span>
+        </div>
+      </div>
+
+      <div class="replay-bar" id="replayBar">
+        <button id="replayExitBtn" class="replay-btn" type="button" title="退出回放">←</button>
+        <button id="replayPlayBtn" class="replay-btn replay-play" type="button">暂停</button>
+        <input id="replaySeek" class="replay-seek" type="range" min="0" max="1000" value="0" step="1" aria-label="回放进度">
+        <button id="replaySpeedBtn" class="replay-btn" type="button">1.0×</button>
+        <button id="replayCameraBtn" class="replay-btn" type="button">镜头 · 追随</button>
+        <button id="replayPhotoBtn" class="replay-btn replay-photo" type="button">照片模式</button>
+      </div>
+
+      <div class="photo-bar" id="photoBar">
+        <span>PHOTO MODE</span>
+        <small>当前画面 · 保存为 PNG</small>
+        <button id="savePhotoBtn" class="replay-btn replay-photo" type="button">保存照片</button>
+        <button id="exitPhotoBtn" class="replay-btn" type="button">退出照片模式</button>
       </div>
     </section>
 
