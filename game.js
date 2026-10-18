@@ -363,6 +363,7 @@
     assist: 'low',
     camera: 'near',
     quality: 'auto',
+    renderer: 'auto',
     autoThrottle: false,
     ghost: true,
     masterVolume: 0.8,
@@ -628,7 +629,13 @@
   /* --------------------------------- Setup --------------------------------- */
 
   const canvas = $('game');
-  const ctx = canvas.getContext('2d', { alpha: false });
+  const ctx = canvas.getContext('2d', { alpha: true });
+  const glCanvas = $('gl');
+  let gl = null;
+  let glReady = false;
+  let useWebGL = false;
+  let glPrograms = null;
+  const glTextures = new Map();
   let W = window.innerWidth;
   let H = window.innerHeight;
   let DPR = 1;
@@ -2052,6 +2059,7 @@
   /* --------------------------------- Track ---------------------------------- */
 
   const track = [];
+  let TRACK_POINTS = [];
 
   function sampleLoopKeys(keys, t) {
     const tt = mod(t, 1);
@@ -2066,6 +2074,69 @@
       }
     }
     return keys[0][1];
+  }
+
+  const TRACK3D_STYLES = {
+    midnight: { aspect: 1.04, waves: [[2, 0.055, 0.3], [3, 0.035, 1.2], [5, 0.018, 2.5]] },
+    harbor: { aspect: 0.8, waves: [[2, 0.09, 1.5], [4, 0.05, 0.2], [7, 0.03, 2.3]] },
+    crimson: { aspect: 1.16, waves: [[2, 0.07, 0.8], [3, 0.05, 2.1], [5, 0.02, 0.4]] },
+    skyline: { aspect: 0.82, waves: [[3, 0.1, 0.4], [5, 0.06, 2.2], [7, 0.035, 1.1]] },
+  };
+
+  function buildTrackPath(def, N) {
+    const style = TRACK3D_STYLES[def.id] || TRACK3D_STYLES.midnight;
+    const rawCount = 4096;
+    const raw = [];
+    for (let i = 0; i < rawCount; i++) {
+      const u = (i / rawCount) * Math.PI * 2;
+      let radius = 1;
+      for (const [k, amp, phase] of style.waves) radius += amp * Math.sin(k * u + phase);
+      raw.push([Math.cos(u) * radius, Math.sin(u) * radius * style.aspect]);
+    }
+    const cumulative = [0];
+    for (let i = 1; i <= rawCount; i++) {
+      const a = raw[i - 1];
+      const b = raw[i % rawCount];
+      cumulative.push(cumulative[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1]));
+    }
+    const totalLength = cumulative[rawCount] || 1;
+    const targetLength = N * SEGMENT_LENGTH;
+    const scale = targetLength / totalLength;
+    const sampled = [];
+    let cursor = 0;
+    for (let i = 0; i <= N; i++) {
+      const dist = (totalLength * i) / N;
+      while (cursor < rawCount - 1 && cumulative[cursor + 1] < dist) cursor++;
+      const span = cumulative[cursor + 1] - cumulative[cursor] || 1;
+      const f = (dist - cumulative[cursor]) / span;
+      const a = raw[cursor];
+      const b = raw[(cursor + 1) % rawCount];
+      sampled.push([(a[0] + (b[0] - a[0]) * f) * scale, (a[1] + (b[1] - a[1]) * f) * scale]);
+    }
+    sampled[N] = [sampled[0][0], sampled[0][1]];
+    const yAt = (i) => sampleLoopKeys(def.heightKeys, i / N);
+    TRACK_POINTS = [];
+    for (let i = 0; i <= N; i++) {
+      const next = sampled[(i + 1) % N];
+      const here = sampled[i % N];
+      const heading = Math.atan2(-(next[0] - here[0]), next[1] - here[1]);
+      TRACK_POINTS.push({
+        x: here[0],
+        y: yAt(i % N),
+        z: here[1],
+        heading,
+        rx: -Math.cos(heading),
+        rz: -Math.sin(heading),
+      });
+    }
+    const curves = [];
+    for (let i = 0; i < N; i++) {
+      let delta = TRACK_POINTS[(i + 1) % N].heading - TRACK_POINTS[i].heading;
+      while (delta > Math.PI) delta -= Math.PI * 2;
+      while (delta < -Math.PI) delta += Math.PI * 2;
+      curves.push(clamp(delta / 0.005, -3.2, 3.2));
+    }
+    return curves;
   }
 
   function buildTrack(def) {
@@ -2103,6 +2174,11 @@
         decorations: [],
         finish: i < 3,
       });
+    }
+
+    const pathCurves = buildTrackPath(def, N);
+    for (let i = 0; i < N; i++) {
+      track[i].curve = pathCurves[i];
     }
 
     const decor = theme.decor;
@@ -2411,6 +2487,7 @@
     setAssist: $('setAssist'),
     setCamera: $('setCamera'),
     setQuality: $('setQuality'),
+    setRenderer: $('setRenderer'),
     setAutoThrottle: $('setAutoThrottle'),
     installAppBtn: $('installAppBtn'),
     installHint: $('installHint'),
@@ -3026,6 +3103,7 @@
     ui.setAssist.value = s.assist;
     ui.setCamera.value = s.camera;
     ui.setQuality.value = s.quality || 'auto';
+    ui.setRenderer.value = s.renderer || 'auto';
     ui.setAutoThrottle.checked = !!s.autoThrottle;
     ui.setGhost.checked = !!s.ghost;
     ui.setMaster.value = Math.round((s.masterVolume ?? 0.8) * 100);
@@ -3035,12 +3113,14 @@
 
   function applySettingsFromUI() {
     const previousQuality = getSettings().quality || 'auto';
+    const previousRenderer = getSettings().renderer || 'auto';
     const s = {
       ...getSettings(),
       difficulty: ui.setDifficulty.value,
       assist: ui.setAssist.value,
       camera: ui.setCamera.value,
       quality: ui.setQuality.value,
+      renderer: ui.setRenderer.value,
       autoThrottle: ui.setAutoThrottle.checked,
       ghost: ui.setGhost.checked,
       masterVolume: Number(ui.setMaster.value) / 100,
@@ -3055,6 +3135,7 @@
       applyQuality();
       resize();
     }
+    if (previousRenderer !== s.renderer) applyRenderer();
     saveProfile();
     if (race.mode === 'menu') updateProfileUI();
   }
@@ -3063,6 +3144,7 @@
     profile.settings = { ...DEFAULT_SETTINGS };
     applyCameraSetting();
     applyQuality();
+    applyRenderer();
     resize();
     audio.setVolumes({
       master: profile.settings.masterVolume,
@@ -3205,23 +3287,31 @@
   function buildMinimapPath() {
     minimapPoints.length = 0;
     const def = currentTrackDef();
-    let seed = 0;
-    for (let i = 0; i < def.id.length; i++) seed = (seed * 31 + def.id.charCodeAt(i)) >>> 0;
-    const rand = mulberry32(seed || 1);
-    const harmonics = [
-      { k: 3, amp: 0.1 + rand() * 0.09, phase: rand() * Math.PI * 2 },
-      { k: 5, amp: 0.045 + rand() * 0.06, phase: rand() * Math.PI * 2 },
-      { k: 2, amp: 0.08 + rand() * 0.07, phase: rand() * Math.PI * 2 },
-    ];
-    const points = 180;
-    for (let i = 0; i <= points; i++) {
-      const t = i / points;
-      const angle = -Math.PI * 0.5 + t * Math.PI * 2;
-      let radius = 1;
-      harmonics.forEach((h) => { radius += Math.sin(angle * h.k + h.phase) * h.amp; });
-      const x = Math.cos(angle) * radius * 1.28;
-      const y = Math.sin(angle) * radius * 0.82;
-      minimapPoints.push({ x, y, p: t });
+    if (TRACK_POINTS.length > 2) {
+      const count = 180;
+      for (let i = 0; i <= count; i++) {
+        const t = i / count;
+        const idx = Math.min(TRACK_POINTS.length - 1, Math.round(t * (TRACK_POINTS.length - 1)));
+        const pt = TRACK_POINTS[idx];
+        minimapPoints.push({ x: pt.x, y: pt.z, p: t });
+      }
+    } else {
+      let seed = 0;
+      for (let i = 0; i < def.id.length; i++) seed = (seed * 31 + def.id.charCodeAt(i)) >>> 0;
+      const rand = mulberry32(seed || 1);
+      const harmonics = [
+        { k: 3, amp: 0.1 + rand() * 0.09, phase: rand() * Math.PI * 2 },
+        { k: 5, amp: 0.045 + rand() * 0.06, phase: rand() * Math.PI * 2 },
+        { k: 2, amp: 0.08 + rand() * 0.07, phase: rand() * Math.PI * 2 },
+      ];
+      const points = 180;
+      for (let i = 0; i <= points; i++) {
+        const t = i / points;
+        const angle = -Math.PI * 0.5 + t * Math.PI * 2;
+        let radius = 1;
+        harmonics.forEach((h) => { radius += Math.sin(angle * h.k + h.phase) * h.amp; });
+        minimapPoints.push({ x: Math.cos(angle) * radius * 1.28, y: Math.sin(angle) * radius * 0.82, p: t });
+      }
     }
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const pt of minimapPoints) {
@@ -3320,6 +3410,569 @@
 
   /* -------------------------------- Rendering ------------------------------- */
 
+  /* ------------------------------- WebGL 3D -------------------------------- */
+
+  function glHex(hex) {
+    const v = hexToRgb(hex);
+    return [v[0] / 255, v[1] / 255, v[2] / 255];
+  }
+
+  function glCompile(type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      gl.deleteShader(shader);
+      return null;
+    }
+    return shader;
+  }
+
+  function glProgram(vertexSource, fragmentSource) {
+    const vs = glCompile(gl.VERTEX_SHADER, vertexSource);
+    const fs = glCompile(gl.FRAGMENT_SHADER, fragmentSource);
+    if (!vs || !fs) return null;
+    const program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return null;
+    return program;
+  }
+
+  function mat4Perspective(fov, aspect, near, far) {
+    const f = 1 / Math.tan(fov / 2);
+    const nf = 1 / (near - far);
+    return new Float32Array([
+      f / aspect, 0, 0, 0,
+      0, f, 0, 0,
+      0, 0, (far + near) * nf, -1,
+      0, 0, 2 * far * near * nf, 0,
+    ]);
+  }
+
+  function mat4LookAt(eye, center, up) {
+    let zx = eye[0] - center[0];
+    let zy = eye[1] - center[1];
+    let zz = eye[2] - center[2];
+    let len = Math.hypot(zx, zy, zz) || 1;
+    zx /= len; zy /= len; zz /= len;
+    let xx = up[1] * zz - up[2] * zy;
+    let xy = up[2] * zx - up[0] * zz;
+    let xz = up[0] * zy - up[1] * zx;
+    len = Math.hypot(xx, xy, xz) || 1;
+    xx /= len; xy /= len; xz /= len;
+    const yx = zy * xz - zz * xy;
+    const yy = zz * xx - zx * xz;
+    const yz = zx * xy - zy * xx;
+    return new Float32Array([
+      xx, yx, zx, 0,
+      xy, yy, zy, 0,
+      xz, yz, zz, 0,
+      -(xx * eye[0] + xy * eye[1] + xz * eye[2]),
+      -(yx * eye[0] + yy * eye[1] + yz * eye[2]),
+      -(zx * eye[0] + zy * eye[1] + zz * eye[2]),
+      1,
+    ]);
+  }
+
+  function mat4Multiply(a, b) {
+    const out = new Float32Array(16);
+    for (let c = 0; c < 4; c++) {
+      for (let r = 0; r < 4; r++) {
+        out[c * 4 + r] =
+          a[r] * b[c * 4] +
+          a[4 + r] * b[c * 4 + 1] +
+          a[8 + r] * b[c * 4 + 2] +
+          a[12 + r] * b[c * 4 + 3];
+      }
+    }
+    return out;
+  }
+
+  function createGLTexture(source) {
+    if (!gl || !source) return null;
+    if (glTextures.has(source)) return glTextures.get(source);
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    glTextures.set(source, texture);
+    return texture;
+  }
+
+  function initWebGL() {
+    if (glReady) return true;
+    try {
+      gl = glCanvas.getContext('webgl', {
+        alpha: false,
+        antialias: true,
+        depth: true,
+        powerPreference: 'high-performance',
+        preserveDrawingBuffer: true,
+      });
+      if (!gl) return false;
+      const colorProgram = glProgram(
+        `attribute vec3 aPosition; attribute vec3 aColor; uniform mat4 uMVP; uniform vec3 uCamera;
+         varying vec3 vColor; varying float vDist;
+         void main(){ gl_Position=uMVP*vec4(aPosition,1.0); vColor=aColor; vDist=distance(aPosition,uCamera); }`,
+        `precision mediump float; uniform vec3 uFogColor; uniform float uNear; uniform float uFar; uniform float uAlpha;
+         varying vec3 vColor; varying float vDist;
+         void main(){ float f=clamp((vDist-uNear)/(uFar-uNear),0.0,1.0); f=f*f*(3.0-2.0*f); gl_FragColor=vec4(mix(vColor,uFogColor,f),uAlpha); }`
+      );
+      const textureProgram = glProgram(
+        `attribute vec2 aPos; uniform mat4 uMVP; uniform vec3 uCenter; uniform vec3 uRight; uniform vec3 uUp;
+         uniform vec2 uSize; uniform vec3 uCamera; varying vec2 vUv; varying float vDist;
+         void main(){ vec3 world=uCenter+uRight*(aPos.x*uSize.x)+uUp*(aPos.y*uSize.y);
+         gl_Position=uMVP*vec4(world,1.0); vUv=aPos+0.5; vDist=distance(world,uCamera); }`,
+        `precision mediump float; uniform sampler2D uTex; uniform vec3 uFogColor; uniform float uNear; uniform float uFar; uniform float uAlpha;
+         varying vec2 vUv; varying float vDist;
+         void main(){ vec4 c=texture2D(uTex,vUv); float f=clamp((vDist-uNear)/(uFar-uNear),0.0,1.0);
+         f=f*f*(3.0-2.0*f); gl_FragColor=vec4(mix(c.rgb,uFogColor,f),c.a*uAlpha); }`
+      );
+      const skyProgram = glProgram(
+        `attribute vec2 aPos; varying vec2 vUv; void main(){ vUv=aPos*0.5+0.5; gl_Position=vec4(aPos,0.0,1.0); }`,
+        `precision mediump float; uniform vec3 uTop; uniform vec3 uMid; uniform vec3 uHorizon; uniform vec3 uSun;
+         uniform float uSunX; uniform float uAspect; varying vec2 vUv;
+         float hash(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+         void main(){
+           vec3 col=mix(uHorizon,uMid,smoothstep(0.28,0.62,vUv.y));
+           col=mix(col,uTop,smoothstep(0.62,1.0,vUv.y));
+           float sx=0.5+uSunX;
+           float d=length(vec2((vUv.x-sx)*uAspect,(vUv.y-0.40)*1.15));
+           float disc=smoothstep(0.095,0.082,d);
+           float glow=exp(-d*7.5)*0.55;
+           col=mix(col,uSun,glow*0.7);
+           col=mix(col,uSun*1.15,disc);
+           float star=hash(floor(vUv*vec2(620.0,360.0)));
+           float starMask=step(0.996,star)*smoothstep(0.48,0.82,vUv.y);
+           col+=vec3(starMask*0.7);
+           gl_FragColor=vec4(col,1.0);
+         }`
+      );
+      if (!colorProgram || !textureProgram || !skyProgram) return false;
+      glPrograms = {
+        color: colorProgram,
+        texture: textureProgram,
+        sky: skyProgram,
+        colorLoc: {
+          position: gl.getAttribLocation(colorProgram, 'aPosition'),
+          color: gl.getAttribLocation(colorProgram, 'aColor'),
+          mvp: gl.getUniformLocation(colorProgram, 'uMVP'),
+          camera: gl.getUniformLocation(colorProgram, 'uCamera'),
+          fog: gl.getUniformLocation(colorProgram, 'uFogColor'),
+          near: gl.getUniformLocation(colorProgram, 'uNear'),
+          far: gl.getUniformLocation(colorProgram, 'uFar'),
+          alpha: gl.getUniformLocation(colorProgram, 'uAlpha'),
+        },
+        texLoc: {
+          pos: gl.getAttribLocation(textureProgram, 'aPos'),
+          mvp: gl.getUniformLocation(textureProgram, 'uMVP'),
+          center: gl.getUniformLocation(textureProgram, 'uCenter'),
+          right: gl.getUniformLocation(textureProgram, 'uRight'),
+          up: gl.getUniformLocation(textureProgram, 'uUp'),
+          size: gl.getUniformLocation(textureProgram, 'uSize'),
+          camera: gl.getUniformLocation(textureProgram, 'uCamera'),
+          fog: gl.getUniformLocation(textureProgram, 'uFogColor'),
+          near: gl.getUniformLocation(textureProgram, 'uNear'),
+          far: gl.getUniformLocation(textureProgram, 'uFar'),
+          alpha: gl.getUniformLocation(textureProgram, 'uAlpha'),
+          tex: gl.getUniformLocation(textureProgram, 'uTex'),
+        },
+        skyLoc: {
+          pos: gl.getAttribLocation(skyProgram, 'aPos'),
+          top: gl.getUniformLocation(skyProgram, 'uTop'),
+          mid: gl.getUniformLocation(skyProgram, 'uMid'),
+          horizon: gl.getUniformLocation(skyProgram, 'uHorizon'),
+          sun: gl.getUniformLocation(skyProgram, 'uSun'),
+          sunX: gl.getUniformLocation(skyProgram, 'uSunX'),
+          aspect: gl.getUniformLocation(skyProgram, 'uAspect'),
+        },
+      };
+      const quad = new Float32Array([-0.5, -0.5, 0.5, -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5]);
+      glPrograms.quadBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, glPrograms.quadBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
+      const skyQuad = new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]);
+      glPrograms.skyBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, glPrograms.skyBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, skyQuad, gl.STATIC_DRAW);
+      glPrograms.colorBuffer = gl.createBuffer();
+      glPrograms.barrierBuffer = gl.createBuffer();
+      glReady = true;
+      gl.disable(gl.CULL_FACE);
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.LEQUAL);
+      return true;
+    } catch (e) {
+      gl = null;
+      glReady = false;
+      return false;
+    }
+  }
+
+  function applyRenderer() {
+    const requested = getSettings().renderer || 'auto';
+    if (requested !== 'canvas') initWebGL();
+    useWebGL = !!glReady && requested !== 'canvas';
+    if (requested === 'webgl' && !useWebGL) showToast('WEBGL 不可用 · 已回退到 2D', 2400, true);
+    if (glCanvas) glCanvas.classList.toggle('is-hidden', !useWebGL);
+    if (useWebGL) resizeGL();
+  }
+
+  function resizeGL() {
+    if (!gl || !glCanvas) return;
+    glCanvas.width = Math.round(W * DPR);
+    glCanvas.height = Math.round(H * DPR);
+    glCanvas.style.width = `${W}px`;
+    glCanvas.style.height = `${H}px`;
+    gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+  }
+
+  if (glCanvas) {
+    glCanvas.addEventListener('webglcontextlost', (event) => {
+      event.preventDefault();
+      glReady = false;
+      useWebGL = false;
+      glCanvas.classList.add('is-hidden');
+      showToast('3D 上下文中断 · 已切换 2D', 2600, true);
+    });
+  }
+
+  function lerpAngle(a, b, t) {
+    let d = b - a;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    return a + d * t;
+  }
+
+  function trackPointAt(progress) {
+    if (!TRACK_POINTS.length) return { x: 0, y: 0, z: 0, heading: 0, rx: 1, rz: 0 };
+    const wrapped = mod(progress, TRACK_LENGTH);
+    const f = wrapped / SEGMENT_LENGTH;
+    const i = Math.floor(f) % TRACK_SEGMENTS;
+    const t = f - Math.floor(f);
+    const a = TRACK_POINTS[i];
+    const b = TRACK_POINTS[(i + 1) % TRACK_SEGMENTS];
+    const heading = lerpAngle(a.heading, b.heading, t);
+    return {
+      x: lerp(a.x, b.x, t),
+      y: lerp(a.y, b.y, t),
+      z: lerp(a.z, b.z, t),
+      heading,
+      rx: -Math.cos(heading),
+      rz: -Math.sin(heading),
+    };
+  }
+
+  function pushGLVertex(arr, x, y, z, color) {
+    arr.push(x, y, z, color[0], color[1], color[2]);
+  }
+
+  function pushGLQuad(arr, p1, p2, p3, p4, color) {
+    pushGLVertex(arr, p1[0], p1[1], p1[2], color);
+    pushGLVertex(arr, p2[0], p2[1], p2[2], color);
+    pushGLVertex(arr, p3[0], p3[1], p3[2], color);
+    pushGLVertex(arr, p1[0], p1[1], p1[2], color);
+    pushGLVertex(arr, p3[0], p3[1], p3[2], color);
+    pushGLVertex(arr, p4[0], p4[1], p4[2], color);
+  }
+
+  function glCamera() {
+    const car = trackPointAt(player.progress);
+    const half = ROAD_WIDTH / 2;
+    const portrait = W < H * 1.15;
+    const camDist = portrait ? 4600 : 1750;
+    const camHeight = portrait ? 1650 : 1000;
+    const carX = car.x + car.rx * player.x * half;
+    const carZ = car.z + car.rz * player.x * half;
+    const fx = -Math.sin(car.heading);
+    const fz = Math.cos(car.heading);
+    const eye = [
+      carX - fx * camDist + race.shakeX * 0.55,
+      car.y + camHeight + race.shakeY * 0.55,
+      carZ - fz * camDist,
+    ];
+    const look = [carX + fx * 2300, car.y + (portrait ? 500 : 430), carZ + fz * 2300];
+    const view = mat4LookAt(eye, look, [0, 1, 0]);
+    const proj = mat4Perspective((FIELD_OF_VIEW / 2) * Math.PI / 180, W / Math.max(1, H), 40, 190000);
+    const mvp = mat4Multiply(proj, view);
+    let vfx = look[0] - eye[0];
+    let vfy = look[1] - eye[1];
+    let vfz = look[2] - eye[2];
+    const flen = Math.hypot(vfx, vfy, vfz) || 1;
+    vfx /= flen; vfy /= flen; vfz /= flen;
+    const right = [-vfz, 0, vfx];
+    const rlen = Math.hypot(right[0], right[2]) || 1;
+    right[0] /= rlen;
+    right[2] /= rlen;
+    return { eye, look, view, proj, mvp, right, forward: [vfx, vfy, vfz], car, carX, carZ };
+  }
+
+  function drawGLSky(camera) {
+    const theme = currentTheme;
+    gl.useProgram(glPrograms.sky);
+    gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
+    gl.disable(gl.BLEND);
+    gl.bindBuffer(gl.ARRAY_BUFFER, glPrograms.skyBuffer);
+    gl.enableVertexAttribArray(glPrograms.skyLoc.pos);
+    gl.vertexAttribPointer(glPrograms.skyLoc.pos, 2, gl.FLOAT, false, 0, 0);
+    gl.uniform3fv(glPrograms.skyLoc.top, glHex(theme.sky[0]));
+    gl.uniform3fv(glPrograms.skyLoc.mid, glHex(theme.sky[3]));
+    gl.uniform3fv(glPrograms.skyLoc.horizon, glHex(theme.sky[5]));
+    gl.uniform3fv(glPrograms.skyLoc.sun, glHex(theme.sun[1]));
+    gl.uniform1f(glPrograms.skyLoc.sunX, Math.sin(camera.car.heading) * 0.11);
+    gl.uniform1f(glPrograms.skyLoc.aspect, W / Math.max(1, H));
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.depthMask(true);
+    gl.enable(gl.DEPTH_TEST);
+  }
+
+  function drawGLColor(vertices, alpha = 1) {
+    if (!vertices.length) return;
+    gl.useProgram(glPrograms.color);
+    gl.bindBuffer(gl.ARRAY_BUFFER, glPrograms.colorBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(glPrograms.colorLoc.position);
+    gl.vertexAttribPointer(glPrograms.colorLoc.position, 3, gl.FLOAT, false, 24, 0);
+    gl.enableVertexAttribArray(glPrograms.colorLoc.color);
+    gl.vertexAttribPointer(glPrograms.colorLoc.color, 3, gl.FLOAT, false, 24, 12);
+    gl.uniformMatrix4fv(glPrograms.colorLoc.mvp, false, glPrograms.mvp);
+    gl.uniform3fv(glPrograms.colorLoc.camera, glPrograms.cameraEye);
+    gl.uniform3fv(glPrograms.colorLoc.fog, glPrograms.fogColor);
+    gl.uniform1f(glPrograms.colorLoc.near, 12000);
+    gl.uniform1f(glPrograms.colorLoc.far, 82000);
+    gl.uniform1f(glPrograms.colorLoc.alpha, alpha);
+    gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 6);
+  }
+
+  function drawGLBillboards(items) {
+    if (!items.length) return;
+    gl.useProgram(glPrograms.texture);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    gl.bindBuffer(gl.ARRAY_BUFFER, glPrograms.quadBuffer);
+    gl.enableVertexAttribArray(glPrograms.texLoc.pos);
+    gl.vertexAttribPointer(glPrograms.texLoc.pos, 2, gl.FLOAT, false, 0, 0);
+    gl.uniformMatrix4fv(glPrograms.texLoc.mvp, false, glPrograms.mvp);
+    gl.uniform3fv(glPrograms.texLoc.camera, glPrograms.cameraEye);
+    gl.uniform3fv(glPrograms.texLoc.fog, glPrograms.fogColor);
+    gl.uniform1f(glPrograms.texLoc.near, 12000);
+    gl.uniform1f(glPrograms.texLoc.far, 82000);
+    gl.uniform3fv(glPrograms.texLoc.up, [0, 1, 0]);
+    gl.uniform3fv(glPrograms.texLoc.right, glPrograms.cameraRight);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1i(glPrograms.texLoc.tex, 0);
+    items.sort((a, b) => b.dist - a.dist);
+    for (const item of items) {
+      if (!item.texture) continue;
+      gl.bindTexture(gl.TEXTURE_2D, item.texture);
+      gl.uniform3fv(glPrograms.texLoc.center, item.center);
+      gl.uniform2f(glPrograms.texLoc.size, item.w, item.h);
+      gl.uniform1f(glPrograms.texLoc.alpha, item.alpha);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+  }
+
+  function renderWebGL(time) {
+    if (!useWebGL || !glReady) return;
+    if (!canvas.width || !glCanvas.width) return;
+    const camera = glCamera();
+    glPrograms.mvp = camera.mvp;
+    glPrograms.cameraEye = camera.eye;
+    glPrograms.cameraRight = camera.right;
+    glPrograms.fogColor = glHex(currentTheme.palette.fog);
+    gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+    gl.clearColor(...glHex(currentTheme.sky[1]), 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+    drawGLSky(camera);
+
+    const pal = currentTheme.palette;
+    const roadA = glHex(pal.roadA);
+    const roadB = glHex(pal.roadB);
+    const rumbleA = glHex(pal.rumbleA);
+    const rumbleB = glHex(pal.rumbleB);
+    const lane = glHex(pal.lane);
+    const grassA = glHex(pal.grassA);
+    const grassB = glHex(pal.grassB);
+    const accent = glHex(currentTheme.accent);
+    const half = ROAD_WIDTH / 2;
+    const baseIdx = Math.floor(mod(player.progress, TRACK_LENGTH) / SEGMENT_LENGTH) % TRACK_SEGMENTS;
+    const start = baseIdx - 9;
+    const opaque = [];
+    const barriers = [];
+
+    const groundColor = glHex(currentTheme.ground[1]);
+    const groundY = -1250;
+    const eye = camera.eye;
+    pushGLQuad(
+      opaque,
+      [eye[0] - 220000, groundY, eye[2] - 220000],
+      [eye[0] + 220000, groundY, eye[2] - 220000],
+      [eye[0] + 220000, groundY, eye[2] + 220000],
+      [eye[0] - 220000, groundY, eye[2] + 220000],
+      groundColor
+    );
+    const mountainColor = glHex(currentTheme.far.top);
+    for (let i = 0; i < 18; i++) {
+      const a = (i / 18) * Math.PI * 2;
+      const b = a + 0.17;
+      const r = 78000;
+      const h = 5200 + (i % 5) * 900;
+      const p1 = [Math.cos(a) * r, groundY, Math.sin(a) * r];
+      const p2 = [Math.cos(b) * r, groundY, Math.sin(b) * r];
+      const p3 = [Math.cos((a + b) / 2) * r, h, Math.sin((a + b) / 2) * r];
+      pushGLVertex(opaque, p1[0], p1[1], p1[2], mountainColor);
+      pushGLVertex(opaque, p2[0], p2[1], p2[2], mountainColor);
+      pushGLVertex(opaque, p3[0], p3[1], p3[2], mountainColor);
+    }
+
+    for (let n = 0; n < DRAW_DISTANCE + 9; n++) {
+      const idx = mod(start + n, TRACK_SEGMENTS);
+      const a = TRACK_POINTS[idx];
+      const b = TRACK_POINTS[(idx + 1) % TRACK_SEGMENTS];
+      if (!a || !b) continue;
+      const roadColor = idx % 2 === 0 ? roadA : roadB;
+      const rumbleColor = idx % 2 === 0 ? rumbleA : rumbleB;
+      const grassColor = idx % 2 === 0 ? grassA : grassB;
+      const lift = 2;
+      const leftA = [a.x - a.rx * half, a.y + lift, a.z - a.rz * half];
+      const rightA = [a.x + a.rx * half, a.y + lift, a.z + a.rz * half];
+      const leftB = [b.x - b.rx * half, b.y + lift, b.z - b.rz * half];
+      const rightB = [b.x + b.rx * half, b.y + lift, b.z + b.rz * half];
+
+      pushGLQuad(opaque,
+        [a.x - a.rx * half * 2.3, a.y - 2, a.z - a.rz * half * 2.3],
+        [leftA[0], leftA[1] - 2, leftA[2]],
+        [leftB[0], leftB[1] - 2, leftB[2]],
+        [b.x - b.rx * half * 2.3, b.y - 2, b.z - b.rz * half * 2.3],
+        grassColor);
+      pushGLQuad(opaque,
+        [rightA[0], rightA[1] - 2, rightA[2]],
+        [a.x + a.rx * half * 2.3, a.y - 2, a.z + a.rz * half * 2.3],
+        [b.x + b.rx * half * 2.3, b.y - 2, b.z + b.rz * half * 2.3],
+        [rightB[0], rightB[1] - 2, rightB[2]],
+        grassColor);
+
+      pushGLQuad(opaque,
+        [a.x - a.rx * half * 1.13, a.y + lift + 1, a.z - a.rz * half * 1.13],
+        [leftA[0], leftA[1] + 1, leftA[2]],
+        [leftB[0], leftB[1] + 1, leftB[2]],
+        [b.x - b.rx * half * 1.13, b.y + lift + 1, b.z - b.rz * half * 1.13],
+        rumbleColor);
+      pushGLQuad(opaque,
+        [rightA[0], rightA[1] + 1, rightA[2]],
+        [a.x + a.rx * half * 1.13, a.y + lift + 1, a.z + a.rz * half * 1.13],
+        [b.x + b.rx * half * 1.13, b.y + lift + 1, b.z + b.rz * half * 1.13],
+        [rightB[0], rightB[1] + 1, rightB[2]],
+        rumbleColor);
+
+      pushGLQuad(opaque, leftA, rightA, rightB, leftB, roadColor);
+
+      if (idx % 10 < 4) {
+        for (const laneOffset of [-1 / 3, 1 / 3]) {
+          const lw = half * 0.012;
+          const offset = half * laneOffset;
+          pushGLQuad(opaque,
+            [a.x + a.rx * offset - a.rx * lw, a.y + lift + 2, a.z + a.rz * offset - a.rz * lw],
+            [a.x + a.rx * offset + a.rx * lw, a.y + lift + 2, a.z + a.rz * offset + a.rz * lw],
+            [b.x + b.rx * offset + b.rx * lw, b.y + lift + 2, b.z + b.rz * offset + b.rz * lw],
+            [b.x + b.rx * offset - b.rx * lw, b.y + lift + 2, b.z + b.rz * offset - b.rz * lw],
+            lane);
+        }
+      }
+
+      const wallHalf = half * WALL_LIMIT;
+      const wallA1 = [a.x - a.rx * wallHalf, a.y, a.z - a.rz * wallHalf];
+      const wallA2 = [a.x + a.rx * wallHalf, a.y, a.z + a.rz * wallHalf];
+      const wallB1 = [b.x - b.rx * wallHalf, b.y, b.z - b.rz * wallHalf];
+      const wallB2 = [b.x + b.rx * wallHalf, b.y, b.z + b.rz * wallHalf];
+      pushGLQuad(barriers,
+        wallA1, [wallA1[0], wallA1[1] + 280, wallA1[2]],
+        [wallB1[0], wallB1[1] + 280, wallB1[2]], wallB1, accent);
+      pushGLQuad(barriers,
+        wallA2, [wallA2[0], wallA2[1] + 280, wallA2[2]],
+        [wallB2[0], wallB2[1] + 280, wallB2[2]], wallB2, accent);
+    }
+
+    drawGLColor(opaque, 1);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    drawGLColor(barriers, 0.34);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+
+    const billboards = [];
+    const camDist = (x, y, z) => Math.hypot(x - camera.eye[0], y - camera.eye[1], z - camera.eye[2]);
+    for (let n = 0; n < DRAW_DISTANCE + 9; n++) {
+      const idx = mod(start + n, TRACK_SEGMENTS);
+      const seg = track[idx];
+      if (!seg || !seg.decorations.length) continue;
+      const pt = TRACK_POINTS[idx];
+      for (const deco of seg.decorations) {
+        if (deco.gate) continue;
+        const texture = createGLTexture(deco.image);
+        if (!texture) continue;
+        const offset = deco.offset * half;
+        const w = deco.width;
+        const h = w * (deco.image.height / deco.image.width);
+        const center = [pt.x + pt.rx * offset, pt.y + h / 2, pt.z + pt.rz * offset];
+        billboards.push({ texture, center, w, h, alpha: 0.95, dist: camDist(center[0], center[1], center[2]) });
+      }
+    }
+
+    const addCar = (sprite, p, x, alpha = 1) => {
+      if (!sprite || !p) return;
+      const texture = createGLTexture(sprite);
+      if (!texture) return;
+      const w = 940;
+      const h = w * (sprite.height / sprite.width);
+      const center = [p.x + p.rx * x * half, p.y + h / 2 + 20, p.z + p.rz * x * half];
+      billboards.push({ texture, center, w, h, alpha, dist: camDist(center[0], center[1], center[2]) });
+    };
+    for (const ai of opponents) {
+      if (ai.finished) continue;
+      addCar(cars[ai.name], trackPointAt(ai.progress), ai.lane, 1);
+    }
+    addCar(carSprites[player.carId] || carSprites.vanta, trackPointAt(player.progress), player.x, 1);
+    if (race.ghost && race.ghost.visible) {
+      addCar(carSprites[race.ghost.carId] || carSprites.vanta, trackPointAt(race.ghost.p), race.ghost.x, 0.4);
+    }
+    drawGLBillboards(billboards);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+    gl.flush();
+  }
+
+  function renderOverlay2D(time) {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    ctx.translate(race.shakeX, race.shakeY);
+    drawParticles();
+    drawSpeedFx(time);
+    ctx.restore();
+    if (race.flash > 0) {
+      ctx.globalAlpha = clamp(race.flash, 0, 0.5);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+  }
+
   function resize() {
     W = window.innerWidth;
     H = window.innerHeight;
@@ -3330,6 +3983,7 @@
     canvas.style.height = `${H}px`;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     buildBackdrop();
+    resizeGL();
   }
 
   let resizeTimer = 0;
@@ -4022,7 +4676,13 @@
   }
 
   function render(time) {
+    if (useWebGL) {
+      renderWebGL(time);
+      renderOverlay2D(time);
+      return;
+    }
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
 
@@ -5222,6 +5882,17 @@
     updateReplayUI();
   }
 
+  function captureSceneBlob(callback) {
+    const out = document.createElement('canvas');
+    out.width = canvas.width;
+    out.height = canvas.height;
+    const octx = out.getContext('2d');
+    if (useWebGL && glCanvas) octx.drawImage(glCanvas, 0, 0, out.width, out.height);
+    octx.drawImage(canvas, 0, 0, out.width, out.height);
+    if (out.toBlob) out.toBlob(callback, 'image/png');
+    else callback(null);
+  }
+
   async function saveReplayPhoto() {
     if (!replayState.photo) return;
     const name = `nightshift-${race.trackId}-${Date.now()}.png`;
@@ -5231,12 +5902,7 @@
       const stored = await savePhotoToGallery(blob);
       showToast(stored ? 'PHOTO SAVED · 照片库 + PNG' : 'PHOTO SAVED · PNG', 1800, true);
     };
-    if (canvas.toBlob) {
-      canvas.toBlob((blob) => { finish(blob); }, 'image/png');
-    } else {
-      const data = canvas.toDataURL('image/png');
-      fetch(data).then((res) => res.blob()).then(finish).catch(() => {});
-    }
+    captureSceneBlob((blob) => { finish(blob); });
   }
 
   /* ---------------------------------- HUD ---------------------------------- */
@@ -5726,7 +6392,7 @@
     if (record.replay) startReplay(record.replay, 'profile');
   });
 
-  [ui.setDifficulty, ui.setAssist, ui.setCamera, ui.setQuality, ui.setAutoThrottle, ui.setGhost].forEach((el) => {
+  [ui.setDifficulty, ui.setAssist, ui.setCamera, ui.setQuality, ui.setRenderer, ui.setAutoThrottle, ui.setGhost].forEach((el) => {
     el.addEventListener('change', () => {
       applySettingsFromUI();
       if (!getSettings().ghost && race.ghost) race.ghost.visible = false;
@@ -6000,7 +6666,9 @@
 
   /* --------------------------------- Boot ----------------------------------- */
 
+  initWebGL();
   applyQuality();
+  applyRenderer();
   resize();
   applyTrack(selectedTrackId, true);
   applyCarSelection(selectedCarId);

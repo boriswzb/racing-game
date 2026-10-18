@@ -1,6 +1,6 @@
-# NIGHTSHIFT · 霓虹极速 6.0
+# NIGHTSHIFT · 霓虹极速 7.0
 
-一款可以直接在浏览器里玩的霓虹合成波（Synthwave）风格伪 3D 街机赛车游戏。无需安装、无需联网、无外部素材，所有车辆、赛道场景、粒子和音效都由代码实时生成。
+一款可以直接在浏览器里玩的霓虹合成波（Synthwave）风格 **WebGL 3D** 街机赛车游戏。无需安装、无需联网、无外部素材，所有车辆、赛道场景、粒子和音效都由代码实时生成。
 
 ![NIGHTSHIFT 游戏画面](preview.png)
 
@@ -14,7 +14,22 @@
 - 可在设置中安装为桌面/主屏幕应用，首次加载后支持离线
 - 在线试玩：https://boriswzb.github.io/racing-game/
 
-## 6.0 内容
+## 7.0 内容
+
+### WebGL 3D 渲染
+
+- 默认使用 **WebGL** 渲染真实 3D 追逐场景
+- 赛道是闭合的 3D 中心线，包含连续弯道、起伏和坡度
+- 3D 追逐相机、透视投影、深度测试与雾化
+- 3D 霓虹路面、路肩、护栏、车道线
+- 车辆、棕榈树、灯柱、广告牌以 3D billboard 方式渲染
+- 程序化天空、星空、太阳、远山与地平线
+- 4 条赛道拥有不同的闭合 3D 路线与高度剖面
+- 迷你地图直接使用真实 3D 赛道中心线
+- 可在设置中切换：自动 / 3D · WebGL / 2D · 兼容
+- WebGL 不可用或上下文中断时自动回退到 Canvas2D
+- 2D 兼容模式继续使用同一套赛道曲率，保留完整玩法
+- 回放与照片模式同时支持 3D 场景；照片会合成 WebGL 与粒子层
 
 ### 四条赛道
 
@@ -156,9 +171,10 @@
 
 ## 技术特性
 
-- 伪 3D 起伏赛道、透视投影、视差天空与动态雾化
+- WebGL 3D 起伏赛道、闭合中心线、透视追逐相机与动态雾化
 - 程序化赛车 / 棕榈树 / 灯柱 / 广告牌 / 龙门架 / 荒漠岩石与仙人掌
-- Canvas 2D 渲染、粒子、速度线、屏幕震动与动态 HUD
+- 3D 霓虹路面、路肩、护栏、车道线、天空与远山
+- Canvas 2D 粒子、速度线、屏幕震动和 HUD，可独立回退到 2D 渲染
 - Web Audio 合成引擎声、风噪、氮气声和 Synthwave 背景音乐
 - 本地 profile v3 存档（CR、车辆、改装、赛事、每日挑战、成就、Top 5、幽灵车、回放、设置）
 - 比赛回放以 10Hz 记录玩家与 AI，最佳比赛回放随赛道纪录保存
@@ -182,6 +198,8 @@
 ## 浏览器兼容
 
 推荐 Chrome / Edge 90+、Firefox 90+、Safari 15+。
-游戏使用 Canvas 2D、Web Audio、Gamepad API、IndexedDB、Service Worker、pointer events 和 `dvh` / `clip-path` 等现代 Web API。
+游戏使用 WebGL 1.0、Canvas 2D、Web Audio、Gamepad API、IndexedDB、Service Worker、pointer events 和 `dvh` / `clip-path` 等现代 Web API。
+
+默认优先使用 WebGL 3D；不支持 WebGL 或上下文丢失时会自动回退到 Canvas2D。也可以在设置中手动选择「2D · 兼容」。
 
 PWA 安装与离线缓存需要 HTTPS 或 localhost；直接双击 `index.html` 仍可正常游玩，但不会注册 Service Worker。iOS Safari 可通过「分享 → 添加到主屏幕」安装。

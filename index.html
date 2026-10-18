@@ -16,6 +16,7 @@
 </head>
 <body>
   <div id="app">
+    <canvas id="gl" aria-hidden="true"></canvas>
     <canvas id="game" aria-label="NIGHTSHIFT 赛车游戏画面"></canvas>
     <div class="fx fx-scanlines"></div>
     <div class="fx fx-vignette"></div>
@@ -355,6 +356,15 @@
               <option value="high">高</option>
               <option value="balanced">均衡</option>
               <option value="low">性能</option>
+            </select>
+          </label>
+
+          <label class="setting-row">
+            <span><b>渲染器</b><small>WebGL 3D / Canvas 2D 兼容</small></span>
+            <select id="setRenderer">
+              <option value="auto">自动</option>
+              <option value="webgl">3D · WebGL</option>
+              <option value="canvas">2D · 兼容</option>
             </select>
           </label>
 
