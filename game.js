@@ -663,7 +663,7 @@
   const SEGMENT_LENGTH = 200;
   let TRACK_SEGMENTS = 1200;
   let TRACK_LENGTH = SEGMENT_LENGTH * TRACK_SEGMENTS;
-  const ROAD_WIDTH = 2200;
+  const ROAD_WIDTH = 3000;
   let cameraHeight = 1500;
   let DRAW_DISTANCE = 300;
   const FIELD_OF_VIEW = 100;
@@ -672,7 +672,7 @@
   const RACER_COUNT = 6;
   const MAX_KMH = 500;
   const WALL_LIMIT = 1.27;
-  const APP_VERSION = '8.0';
+  const APP_VERSION = '8.0.1';
 
   const QUALITY_PRESETS = {
     high: { drawDistance: 300, dpr: 2, particles: 1, label: '高' },
@@ -6972,7 +6972,7 @@
   applyRenderer();
   resize();
   if (forcedRenderer === 'webgl' && useWebGL) {
-    setTimeout(() => showToast('WEBGL 3D ACTIVE · 开罗狂飙 v8.0', 2600, true), 700);
+    setTimeout(() => showToast('WEBGL 3D ACTIVE · 开罗狂飙 v8.0.1', 2600, true), 700);
   }
 
   applyTrack(selectedTrackId, true);

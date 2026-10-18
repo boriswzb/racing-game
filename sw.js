@@ -1,10 +1,10 @@
 /* CAIRO RUSH service worker — offline shell for the static game. */
-const CACHE_NAME = 'cairo-rush-8.0.0';
+const CACHE_NAME = 'cairo-rush-8.0.1';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=8.0',
-  './game.js?v=8.0',
+  './styles.css?v=8.0.1',
+  './game.js?v=8.0.1',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
