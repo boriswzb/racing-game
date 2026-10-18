@@ -310,6 +310,54 @@
     { id: 'e5', name: 'NIGHT CHAMPION', cn: '午夜之王', track: 'midnight', laps: 4, difficulty: 'pro', target: 1, reward: 1400, color: '#ffd36e', desc: '四圈决胜，只接受第一名。' },
   ];
 
+  const UPGRADE_DEFS = [
+    {
+      id: 'engine', name: '引擎', code: 'ENGINE', desc: '每级 +220 极速', max: 5,
+      costs: [120, 200, 320, 480, 700],
+      apply: (car, level) => { car.maxSpeed += 220 * level; car.bars.speed = Math.min(100, car.bars.speed + 4 * level); },
+    },
+    {
+      id: 'grip', name: '轮胎 / 悬挂', code: 'CHASSIS', desc: '每级 +0.04 抓地', max: 5,
+      costs: [120, 200, 320, 480, 700],
+      apply: (car, level) => { car.grip += 0.04 * level; car.steer += 0.015 * level; car.bars.grip = Math.min(100, car.bars.grip + 4 * level); },
+    },
+    {
+      id: 'nitro', name: '氮气系统', code: 'NITRO', desc: '每级 +220 氮气极速', max: 5,
+      costs: [120, 200, 320, 480, 700],
+      apply: (car, level) => { car.nitroSpeed += 220 * level; car.nitroRegen += 0.25 * level; car.bars.nitro = Math.min(100, car.bars.nitro + 4 * level); },
+    },
+    {
+      id: 'weight', name: '轻量化', code: 'WEIGHT', desc: '每级 +260 加速', max: 5,
+      costs: [120, 200, 320, 480, 700],
+      apply: (car, level) => { car.accel += 260 * level; car.bars.accel = Math.min(100, car.bars.accel + 4 * level); },
+    },
+  ];
+
+  const ACHIEVEMENTS = [
+    { id: 'first_race', name: 'FIRST LIGHT', cn: '初次点火', desc: '完成第一场比赛', metric: 'races', target: 1, reward: 100, icon: '01' },
+    { id: 'first_win', name: 'WINNER', cn: '冠军之夜', desc: '赢得第一场比赛', metric: 'wins', target: 1, reward: 200, icon: '02' },
+    { id: 'podium3', name: 'PODIUM REGULAR', cn: '领奖台常客', desc: '累计 3 次登上领奖台', metric: 'podiums', target: 3, reward: 250, icon: '03' },
+    { id: 'collector', name: 'COLLECTOR', cn: '车库收藏家', desc: '拥有全部 3 台赛车', metric: 'cars', target: 3, reward: 500, icon: '04' },
+    { id: 'champion', name: 'NIGHT CHAMPION', cn: '午夜之王', desc: '完成全部 5 场生涯赛事', metric: 'events', target: 5, reward: 1000, icon: '05' },
+    { id: 'record1', name: 'RECORD RUN', cn: '纪录创造者', desc: '创造 1 个赛道纪录', metric: 'records', target: 1, reward: 200, icon: '06' },
+    { id: 'drift60', name: 'SIDEWAYS', cn: '侧滑艺术', desc: '累计漂移 60 秒', metric: 'drift', target: 60, reward: 300, icon: '07' },
+    { id: 'nitro120', name: 'NITRO ADDICT', cn: '氮气依赖', desc: '累计使用氮气 120 秒', metric: 'nitro', target: 120, reward: 300, icon: '08' },
+    { id: 'clean1', name: 'FLAWLESS', cn: '完美单圈', desc: '完成 1 个零失误单圈', metric: 'cleanLaps', target: 1, reward: 250, icon: '09' },
+    { id: 'redline', name: 'REDLINE', cn: '突破红线', desc: '达到 400 KM/H', metric: 'topSpeed', target: 400, reward: 300, icon: '10' },
+    { id: 'veteran', name: 'VETERAN', cn: '夜路老兵', desc: '完成 10 场比赛', metric: 'races', target: 10, reward: 500, icon: '11' },
+    { id: 'daily3', name: 'ROUTINE', cn: '每日例行', desc: '完成 3 个每日挑战', metric: 'dailies', target: 3, reward: 300, icon: '12' },
+  ];
+
+  const DAILY_POOL = [
+    { id: 'races2', name: '完成 2 场比赛', metric: 'races', target: 2, reward: 150, icon: '02' },
+    { id: 'podium1', name: '登上领奖台 1 次', metric: 'podiums', target: 1, reward: 180, icon: '03' },
+    { id: 'win1', name: '赢得 1 场比赛', metric: 'wins', target: 1, reward: 250, icon: '01' },
+    { id: 'drift20', name: '累计漂移 20 秒', metric: 'drift', target: 20, reward: 160, icon: '07' },
+    { id: 'nitro35', name: '使用氮气 35 秒', metric: 'nitro', target: 35, reward: 160, icon: '08' },
+    { id: 'speed330', name: '达到 330 KM/H', metric: 'topSpeed', target: 330, reward: 180, icon: '10' },
+    { id: 'clean1', name: '完成 1 个零失误单圈', metric: 'cleanLaps', target: 1, reward: 220, icon: '09' },
+  ];
+
   const DEFAULT_SETTINGS = {
     difficulty: 'standard',
     assist: 'low',
@@ -324,9 +372,20 @@
   let savedBestLap = Number(storage.get('nightshift.bestLap', '0')) || 0;
   const savedMuted = storage.get('nightshift.muted', '0') === '1';
 
+  function todayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function emptyUpgradeSet() {
+    return { engine: 0, grip: 0, nitro: 0, weight: 0 };
+  }
+
   function createDefaultProfile() {
+    const upgrades = {};
+    CAR_DEFS.forEach((car) => { upgrades[car.id] = emptyUpgradeSet(); });
     return {
-      version: 2,
+      version: 3,
       coins: 400,
       wins: 0,
       podiums: 0,
@@ -334,6 +393,18 @@
       cars: ['vanta'],
       events: {},
       tracks: {},
+      leaderboards: {},
+      upgrades,
+      achievements: {},
+      daily: null,
+      stats: {
+        driftTime: 0,
+        nitroTime: 0,
+        cleanLaps: 0,
+        records: 0,
+        topSpeed: 0,
+        dailies: 0,
+      },
       lastTrack: 'midnight',
       lastCar: 'vanta',
       settings: { ...DEFAULT_SETTINGS },
@@ -344,7 +415,8 @@
     const base = createDefaultProfile();
     let parsed = null;
     try {
-      parsed = JSON.parse(storage.get('nightshift.profile.v2', 'null'));
+      parsed = JSON.parse(storage.get('nightshift.profile.v3', 'null'));
+      if (!parsed) parsed = JSON.parse(storage.get('nightshift.profile.v2', 'null'));
     } catch (e) {
       parsed = null;
     }
@@ -352,12 +424,25 @@
     const cars = Array.isArray(parsed.cars) && parsed.cars.length
       ? Array.from(new Set(['vanta', ...parsed.cars.filter((id) => CAR_BY_ID[id])]))
       : base.cars;
+    const upgrades = {};
+    CAR_DEFS.forEach((car) => {
+      upgrades[car.id] = {
+        ...emptyUpgradeSet(),
+        ...((parsed.upgrades && parsed.upgrades[car.id]) || {}),
+      };
+    });
     return {
       ...base,
       ...parsed,
+      version: 3,
       cars,
       events: { ...(parsed.events || {}) },
       tracks: { ...(parsed.tracks || {}) },
+      leaderboards: { ...(parsed.leaderboards || {}) },
+      upgrades,
+      achievements: { ...(parsed.achievements || {}) },
+      daily: parsed.daily || null,
+      stats: { ...base.stats, ...(parsed.stats || {}) },
       settings: { ...base.settings, ...(parsed.settings || {}) },
     };
   }
@@ -367,9 +452,112 @@
   let selectedCarId = profile.cars.includes(profile.lastCar) ? profile.lastCar : 'vanta';
   let currentEvent = null;
   let currentRaceMode = 'QUICK RACE';
+  let profileTab = 'daily';
+  ensureDaily();
+  checkAchievements();
 
   function saveProfile() {
-    storage.set('nightshift.profile.v2', JSON.stringify(profile));
+    storage.set('nightshift.profile.v3', JSON.stringify(profile));
+  }
+
+  function upgradeLevels(carId) {
+    if (!profile.upgrades[carId]) profile.upgrades[carId] = emptyUpgradeSet();
+    return profile.upgrades[carId];
+  }
+
+  function effectiveCar(baseCar) {
+    const car = { ...baseCar, bars: { ...baseCar.bars } };
+    const levels = upgradeLevels(baseCar.id);
+    UPGRADE_DEFS.forEach((def) => {
+      const level = clamp(levels[def.id] || 0, 0, def.max);
+      if (level > 0) def.apply(car, level);
+    });
+    return car;
+  }
+
+  function dailyChallengeById(id) {
+    return DAILY_POOL.find((c) => c.id === id) || null;
+  }
+
+  function pickDailyIds(date) {
+    let seed = 17;
+    for (let i = 0; i < date.length; i++) seed = (seed * 31 + date.charCodeAt(i)) >>> 0;
+    const rand = mulberry32(seed);
+    const pool = DAILY_POOL.slice();
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool.slice(0, 3).map((c) => c.id);
+  }
+
+  function emptyDailyProgress() {
+    return { races: 0, podiums: 0, wins: 0, drift: 0, nitro: 0, topSpeed: 0, cleanLaps: 0 };
+  }
+
+  function ensureDaily() {
+    const key = todayKey();
+    if (!profile.daily || profile.daily.date !== key) {
+      profile.daily = {
+        date: key,
+        ids: pickDailyIds(key),
+        progress: emptyDailyProgress(),
+        claimed: [],
+      };
+      saveProfile();
+    }
+    if (!profile.daily.progress) profile.daily.progress = emptyDailyProgress();
+    if (!Array.isArray(profile.daily.claimed)) profile.daily.claimed = [];
+    return profile.daily;
+  }
+
+  function achievementValue(metric) {
+    switch (metric) {
+      case 'races': return profile.races;
+      case 'wins': return profile.wins;
+      case 'podiums': return profile.podiums;
+      case 'cars': return profile.cars.length;
+      case 'events': return CAREER_EVENTS.filter((e) => eventCompleted(e)).length;
+      case 'records': return profile.stats.records;
+      case 'drift': return profile.stats.driftTime;
+      case 'nitro': return profile.stats.nitroTime;
+      case 'cleanLaps': return profile.stats.cleanLaps;
+      case 'topSpeed': return profile.stats.topSpeed;
+      case 'dailies': return profile.stats.dailies;
+      default: return 0;
+    }
+  }
+
+  function checkAchievements() {
+    const newly = [];
+    ACHIEVEMENTS.forEach((ach) => {
+      if (profile.achievements[ach.id]) return;
+      if (achievementValue(ach.metric) >= ach.target) {
+        profile.achievements[ach.id] = { at: Date.now(), reward: ach.reward };
+        profile.coins += ach.reward;
+        newly.push(ach);
+      }
+    });
+    if (newly.length) saveProfile();
+    return newly;
+  }
+
+  function addLeaderboardEntry(trackId, time, rank, carId) {
+    if (!time || time <= 0) return null;
+    if (!profile.leaderboards[trackId]) profile.leaderboards[trackId] = [];
+    const list = profile.leaderboards[trackId];
+    const entry = {
+      time,
+      rank,
+      carId,
+      carName: (CAR_BY_ID[carId] || CAR_BY_ID.vanta).name,
+      at: Date.now(),
+    };
+    list.push(entry);
+    list.sort((a, b) => a.time - b.time);
+    profile.leaderboards[trackId] = list.slice(0, 5);
+    saveProfile();
+    return profile.leaderboards[trackId].indexOf(entry);
   }
 
   function getTrackRecord(trackId) {
@@ -2088,6 +2276,7 @@
     menu: $('menu'),
     setup: $('setupScreen'),
     career: $('careerScreen'),
+    profileScreen: $('profileScreen'),
     settings: $('settingsScreen'),
     pause: $('pauseScreen'),
     results: $('results'),
@@ -2117,6 +2306,7 @@
     sector2: $('sector2'),
     sector3: $('sector3'),
     deltaValue: $('deltaValue'),
+    ghostDelta: $('ghostDelta'),
     minimap: $('minimap'),
     mapTrackName: $('mapTrackName'),
     profileCoins: $('profileCoins'),
@@ -2128,11 +2318,16 @@
     careerCoins: $('careerCoins'),
     trackGrid: $('trackGrid'),
     carGrid: $('carGrid'),
+    upgradeList: $('upgradeList'),
     setupSummary: $('setupSummary'),
     setupSub: $('setupSub'),
     setupStartBtn: $('setupStartBtn'),
     careerSummary: $('careerSummary'),
     careerList: $('careerList'),
+    profileSummary: $('profileSummary'),
+    profileTabs: $('profileTabs'),
+    profileContent: $('profileContent'),
+    profileCoinsLarge: $('profileCoinsLarge'),
     resultRank: $('resultRank'),
     resultTitle: $('resultTitle'),
     resultSub: $('resultSub'),
@@ -2194,11 +2389,15 @@
     ui.countdown.classList.add('is-hidden');
   }
 
-  function showToast(text, duration = 1700) {
+  function showToast(text, duration = 1700, overlay = false) {
     ui.toast.textContent = text;
+    ui.toast.classList.toggle('overlay-toast', overlay);
     ui.toast.classList.add('show');
     clearTimeout(race.toastTimer);
-    race.toastTimer = setTimeout(() => ui.toast.classList.remove('show'), duration);
+    race.toastTimer = setTimeout(() => {
+      ui.toast.classList.remove('show');
+      ui.toast.classList.remove('overlay-toast');
+    }, duration);
   }
 
   function updateSoundButton() {
@@ -2217,7 +2416,7 @@
   }
 
   function carDefForRace() {
-    return CAR_BY_ID[selectedCarId] || CAR_BY_ID.vanta;
+    return effectiveCar(CAR_BY_ID[selectedCarId] || CAR_BY_ID.vanta);
   }
 
   function eventCompleted(event) {
@@ -2242,6 +2441,7 @@
     ui.profileWins.textContent = String(profile.wins);
     ui.setupCoins.textContent = String(profile.coins);
     ui.careerCoins.textContent = String(profile.coins);
+    if (ui.profileCoinsLarge) ui.profileCoinsLarge.textContent = String(profile.coins);
     const track = TRACK_BY_ID[selectedTrackId] || TRACK_DEFS[0];
     const car = carDefForRace();
     ui.menuTrackName.textContent = track.cn;
@@ -2271,18 +2471,21 @@
     ui.carGrid.innerHTML = CAR_DEFS.map((car) => {
       const locked = !isCarUnlocked(car.id);
       const selected = car.id === selectedCarId;
+      const tuned = effectiveCar(car);
+      const levels = upgradeLevels(car.id);
+      const totalLevel = UPGRADE_DEFS.reduce((sum, def) => sum + (levels[def.id] || 0), 0);
       const bars = [
-        ['SPD', car.bars.speed],
-        ['ACC', car.bars.accel],
-        ['GRP', car.bars.grip],
-        ['N2O', car.bars.nitro],
+        ['SPD', tuned.bars.speed],
+        ['ACC', tuned.bars.accel],
+        ['GRP', tuned.bars.grip],
+        ['N2O', tuned.bars.nitro],
       ].map(([label, value]) => `<span class="car-bar">${label}<i style="--v:${value}%"></i></span>`).join('');
       return `<div class="car-card ${selected ? 'selected' : ''} ${locked ? 'locked' : ''}" data-car="${car.id}" role="button" tabindex="${locked ? -1 : 0}" style="--cc:${car.accent}">
         <div class="car-art"><img src="${carPreviewUrl(car)}" alt="${car.name}"></div>
         <div class="car-info">
           <span>${locked ? 'LOCKED' : car.tag}</span>
           <b>${car.name}</b>
-          <span class="car-tag">${car.tag}</span>
+          <span class="car-tag">${car.tag}${totalLevel ? ` · TUNED +${totalLevel}` : ''}</span>
           <div class="car-bars">${bars}</div>
         </div>
         ${selected && !locked ? '<div class="car-check">✓</div>' : ''}
@@ -2290,11 +2493,48 @@
       </div>`;
     }).join('');
 
+    renderUpgrades();
+
     const track = TRACK_BY_ID[selectedTrackId] || TRACK_DEFS[0];
     const car = carDefForRace();
     const difficulty = DIFFICULTY[getSettings().difficulty] || DIFFICULTY.standard;
     ui.setupSummary.textContent = `${track.name} · ${car.name}`;
     ui.setupSub.textContent = `${track.laps} LAPS · 5 RIVALS · ${difficulty.label}`;
+    updateProfileUI();
+  }
+
+  function renderUpgrades() {
+    if (!ui.upgradeList) return;
+    const levels = upgradeLevels(selectedCarId);
+    const car = carDefForRace();
+    const total = UPGRADE_DEFS.reduce((sum, def) => sum + (levels[def.id] || 0), 0);
+    const header = `<div class="upgrade-head"><span>当前赛车</span><b>${car.name}</b><em>总改装 +${total}</em><small>${profile.coins} CR</small></div>`;
+    const rows = UPGRADE_DEFS.map((def) => {
+      const level = clamp(levels[def.id] || 0, 0, def.max);
+      const maxed = level >= def.max;
+      const cost = maxed ? 0 : def.costs[level];
+      const pips = Array.from({ length: def.max }, (_, i) => `<i class="${i < level ? 'on' : ''}"></i>`).join('');
+      return `<div class="upgrade-row" style="--uc:${car.accent}">
+        <div class="upgrade-name"><span>${def.code}</span><b>${def.name}</b><small>${def.desc}</small></div>
+        <div class="upgrade-level"><span class="upgrade-pips">${pips}</span><small>LV ${level} / ${def.max}</small></div>
+        <button type="button" data-upgrade="${def.id}" ${maxed || profile.coins < cost ? 'disabled' : ''}>${maxed ? 'MAX' : `升级 · ${cost} CR`}</button>
+      </div>`;
+    }).join('');
+    ui.upgradeList.innerHTML = header + rows;
+  }
+
+  function buyUpgrade(statId) {
+    const def = UPGRADE_DEFS.find((d) => d.id === statId);
+    if (!def) return;
+    const levels = upgradeLevels(selectedCarId);
+    const level = clamp(levels[statId] || 0, 0, def.max);
+    if (level >= def.max) return;
+    const cost = def.costs[level];
+    if (profile.coins < cost) return;
+    profile.coins -= cost;
+    levels[statId] = level + 1;
+    saveProfile();
+    applyCarSelection(selectedCarId);
     updateProfileUI();
   }
 
@@ -2344,6 +2584,108 @@
     updateProfileUI();
   }
 
+  function renderProfile() {
+    if (!ui.profileContent) return;
+    ensureDaily();
+    updateProfileUI();
+    ui.profileCoinsLarge.textContent = String(profile.coins);
+    const completedEvents = CAREER_EVENTS.filter((e) => eventCompleted(e)).length;
+    const unlockedAchievements = Object.keys(profile.achievements).length;
+    ui.profileSummary.innerHTML = `
+      <div class="profile-stat"><span>RACES</span><b>${profile.races}</b></div>
+      <div class="profile-stat"><span>WINS</span><b>${profile.wins}</b></div>
+      <div class="profile-stat"><span>PODIUMS</span><b>${profile.podiums}</b></div>
+      <div class="profile-stat"><span>CARS</span><b>${profile.cars.length}<small>/3</small></b></div>
+      <div class="profile-stat"><span>EVENTS</span><b>${completedEvents}<small>/5</small></b></div>
+      <div class="profile-stat"><span>CLEAN LAPS</span><b>${profile.stats.cleanLaps}</b></div>
+      <div class="profile-stat"><span>TOP SPEED</span><b>${Math.round(profile.stats.topSpeed)}<small>KM/H</small></b></div>
+      <div class="profile-stat"><span>DRIFT TIME</span><b>${Math.floor(profile.stats.driftTime)}<small>SEC</small></b></div>`;
+
+    [...ui.profileTabs.children].forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-profile-tab') === profileTab);
+    });
+
+    if (profileTab === 'daily') {
+      const daily = ensureDaily();
+      const cards = daily.ids.map((id) => {
+        const challenge = dailyChallengeById(id);
+        if (!challenge) return '';
+        const value = Math.min(challenge.target, daily.progress[challenge.metric] || 0);
+        const claimed = daily.claimed.includes(id);
+        const pct = clamp((value / challenge.target) * 100, 0, 100);
+        return `<div class="daily-card ${claimed ? 'done' : ''}" style="--dc:${claimed ? '#52ffb8' : currentTheme.accent}">
+          <div class="daily-icon">${challenge.icon}</div>
+          <div class="daily-main">
+            <span>DAILY · ${challenge.reward} CR</span>
+            <b>${challenge.name}</b>
+            <div class="progress-track"><i style="width:${pct.toFixed(1)}%"></i></div>
+          </div>
+          <div class="daily-state"><b>${claimed ? '✓' : `${value}/${challenge.target}`}</b><small>${claimed ? '已领取' : '进行中'}</small></div>
+        </div>`;
+      }).join('');
+      ui.profileContent.innerHTML = `
+        <div class="profile-section-head"><div><span>DAILY CHALLENGES</span><h3>今日挑战</h3></div><p>${daily.date} · 每日 00:00 刷新</p></div>
+        <div class="daily-list">${cards}</div>
+        <div class="profile-note">完成挑战后奖励会自动发放到 CR 余额。</div>`;
+    } else if (profileTab === 'achievements') {
+      const items = ACHIEVEMENTS.map((ach) => {
+        const unlocked = !!profile.achievements[ach.id];
+        const value = Math.min(ach.target, achievementValue(ach.metric));
+        const pct = clamp((value / ach.target) * 100, 0, 100);
+        return `<div class="achievement-card ${unlocked ? 'unlocked' : ''}">
+          <div class="achievement-icon">${unlocked ? '✓' : ach.icon}</div>
+          <div class="achievement-main">
+            <span>${ach.name}</span>
+            <b>${ach.cn}</b>
+            <small>${ach.desc}</small>
+            <div class="progress-track"><i style="width:${pct.toFixed(1)}%"></i></div>
+          </div>
+          <div class="achievement-reward"><b>+${ach.reward}</b><small>CR</small><em>${unlocked ? '已解锁' : `${value}/${ach.target}`}</em></div>
+        </div>`;
+      }).join('');
+      ui.profileContent.innerHTML = `
+        <div class="profile-section-head"><div><span>ACHIEVEMENTS</span><h3>成就</h3></div><p>${unlockedAchievements} / ${ACHIEVEMENTS.length} 已解锁</p></div>
+        <div class="achievement-list">${items}</div>`;
+    } else {
+      const blocks = TRACK_DEFS.map((track) => {
+        const record = getTrackRecord(track.id);
+        const list = profile.leaderboards[track.id] || [];
+        const rows = list.length
+          ? list.map((entry, i) => `<div class="record-row">
+              <span>${i + 1}</span>
+              <b>${formatTime(entry.time)}</b>
+              <em>${entry.carName || 'UNKNOWN'}</em>
+              <small>P${entry.rank || '-'}</small>
+            </div>`).join('')
+          : '<div class="record-empty">暂无完赛记录</div>';
+        return `<div class="record-block" style="--rc:${THEMES[track.theme].accent}">
+          <div class="record-head"><div><span>${track.sector}</span><b>${track.name}</b></div><em>BEST ${record.bestTime ? formatTime(record.bestTime) : '--:--.---'}</em></div>
+          <div class="record-list">${rows}</div>
+        </div>`;
+      }).join('');
+      ui.profileContent.innerHTML = `
+        <div class="profile-section-head"><div><span>TRACK RECORDS</span><h3>本地 Top 5</h3></div><p>你的每一条赛道纪录</p></div>
+        <div class="record-grid">${blocks}</div>`;
+    }
+  }
+
+  function openProfile(tab = profileTab) {
+    profileTab = tab;
+    setScreen(ui.menu, false);
+    setScreen(ui.setup, false);
+    setScreen(ui.career, false);
+    setScreen(ui.results, false);
+    setScreen(ui.profileScreen, true);
+    showRaceHud(false);
+    renderProfile();
+  }
+
+  function closeProfile() {
+    setScreen(ui.profileScreen, false);
+    setScreen(ui.menu, true);
+    updateProfileUI();
+  }
+
   function renderSettings() {
     const s = getSettings();
     ui.setDifficulty.value = s.difficulty;
@@ -2389,8 +2731,9 @@
   }
 
   function applyCarSelection(carId) {
-    const car = CAR_BY_ID[carId];
-    if (!car || !isCarUnlocked(carId)) return;
+    const baseCar = CAR_BY_ID[carId];
+    if (!baseCar || !isCarUnlocked(carId)) return;
+    const car = effectiveCar(baseCar);
     selectedCarId = carId;
     profile.lastCar = carId;
     player.carId = carId;
@@ -2415,6 +2758,11 @@
     profile.cars.push(carId);
     saveProfile();
     applyCarSelection(carId);
+    const newAchievements = checkAchievements();
+    if (newAchievements.length) {
+      const total = newAchievements.reduce((sum, a) => sum + a.reward, 0);
+      showToast(`成就解锁 · ${newAchievements[0].cn} +${total} CR`, 2200, true);
+    }
     renderCareer();
     updateProfileUI();
   }
@@ -2424,6 +2772,7 @@
     currentRaceMode = 'QUICK RACE';
     setScreen(ui.menu, false);
     setScreen(ui.career, false);
+    setScreen(ui.profileScreen, false);
     setScreen(ui.results, false);
     setScreen(ui.setup, true);
     showRaceHud(false);
@@ -2441,6 +2790,7 @@
     currentEvent = null;
     setScreen(ui.menu, false);
     setScreen(ui.setup, false);
+    setScreen(ui.profileScreen, false);
     setScreen(ui.results, false);
     setScreen(ui.career, true);
     showRaceHud(false);
@@ -2480,6 +2830,7 @@
     setScreen(ui.setup, false);
     setScreen(ui.menu, false);
     setScreen(ui.career, false);
+    setScreen(ui.profileScreen, false);
     startRace();
   }
 
@@ -2496,6 +2847,7 @@
     setScreen(ui.career, false);
     setScreen(ui.setup, false);
     setScreen(ui.menu, false);
+    setScreen(ui.profileScreen, false);
     startRace();
   }
 
@@ -3439,6 +3791,10 @@
     race.sectorTimes = [0, 0, 0];
     race.ghostSamples = [];
     race.lastGhostSample = -1;
+    race.driftTime = 0;
+    race.nitroTime = 0;
+    race.cleanLaps = 0;
+    race.lapClean = true;
     const ghostData = record.ghost;
     race.ghost = getSettings().ghost && ghostData && Array.isArray(ghostData.samples) && ghostData.samples.length > 1
       ? {
@@ -3464,6 +3820,10 @@
     ui.sector3.textContent = '--.--';
     ui.deltaValue.textContent = '--.---';
     ui.deltaValue.className = '';
+    if (ui.ghostDelta) {
+      ui.ghostDelta.textContent = '--.---';
+      ui.ghostDelta.className = '';
+    }
     ui.slipstreamBadge.classList.remove('show');
     updateProfileUI();
   }
@@ -3486,6 +3846,7 @@
     setScreen(ui.menu, false);
     setScreen(ui.setup, false);
     setScreen(ui.career, false);
+    setScreen(ui.profileScreen, false);
     setScreen(ui.settings, false);
     setScreen(ui.results, false);
     setScreen(ui.pause, false);
@@ -3541,6 +3902,27 @@
     const f = clamp((t - a.t) / span, 0, 1);
     ghost.p = lerp(a.p, b.p, f);
     ghost.x = lerp(a.x, b.x, f);
+  }
+
+  function ghostTimeAtProgress(progress) {
+    const ghost = race.ghost;
+    if (!ghost || !ghost.samples || ghost.samples.length < 2) return null;
+    const samples = ghost.samples;
+    if (progress <= samples[0].p) return samples[0].t;
+    const last = samples[samples.length - 1];
+    if (progress >= last.p) return last.t;
+    let lo = 0;
+    let hi = samples.length - 1;
+    while (lo + 1 < hi) {
+      const mid = (lo + hi) >> 1;
+      if (samples[mid].p <= progress) lo = mid;
+      else hi = mid;
+    }
+    const a = samples[lo];
+    const b = samples[hi];
+    const span = Math.max(1, b.p - a.p);
+    const f = clamp((progress - a.p) / span, 0, 1);
+    return lerp(a.t, b.t, f);
   }
 
   function computeSlipstream() {
@@ -3632,9 +4014,11 @@
       0,
       1
     );
+    if (player.drift > 0.34 && player.speed > 6000) race.driftTime += dt;
 
     player.offroad = Math.abs(player.x) > 0.985 && Math.abs(player.x) <= WALL_LIMIT;
     if (player.offroad) {
+      race.lapClean = false;
       player.speed -= Math.max(0, player.speed - 5200) * 1.45 * dt;
       player.speed -= 2400 * dt;
       race.shake = Math.min(8, race.shake + 18 * dt);
@@ -3646,6 +4030,7 @@
       const side = Math.sign(player.x) || 1;
       player.x = side * WALL_LIMIT;
       if (player.wallCooldown <= 0) {
+        race.lapClean = false;
         player.speed *= 0.58;
         player.lateralVel = -player.lateralVel * 0.5 - side * 0.2;
         player.wallCooldown = 0.55;
@@ -3678,6 +4063,7 @@
     }
 
     if (player.boosting) {
+      race.nitroTime += dt;
       spawnBoostParticles();
       race.shake = Math.max(race.shake, 1.9);
     }
@@ -3689,6 +4075,7 @@
     const lapBoundary = race.lap * TRACK_LENGTH;
     if (player.progress >= lapBoundary) {
       const lapTime = race.time - race.lapStart;
+      if (race.lapClean) race.cleanLaps += 1;
       player.lastLap = lapTime;
       const record = getTrackRecord(race.trackId);
       if (lapTime > 0 && (!player.bestLap || lapTime < player.bestLap)) {
@@ -3716,6 +4103,7 @@
 
       race.lap += 1;
       player.lap = race.lap;
+      race.lapClean = true;
       player.nitro = Math.min(100, player.nitro + 16);
       race.flash = 1;
       race.sectorTimes = [0, 0, 0];
@@ -3749,7 +4137,8 @@
       const seg = track[segIndex];
       const ahead = track[(segIndex + 22) % TRACK_SEGMENTS];
       const curvePenalty = Math.min(0.15, Math.abs(seg.curve) * 0.037);
-      let target = player.maxSpeed * ai.pace * race.aiSkill * (1 - curvePenalty);
+      const baseCar = CAR_BY_ID[player.carId] || CAR_BY_ID.vanta;
+      let target = baseCar.maxSpeed * ai.pace * race.aiSkill * (1 - curvePenalty);
       const gap = ai.progress - playerFrac;
 
       if (gap > 11000) target *= 0.96;
@@ -3822,6 +4211,7 @@
 
   function crash(ai, rel) {
     race.collisionCooldown = 0.6;
+    race.lapClean = false;
     ai.cooldown = 1.2;
     player.speed *= 0.79;
     player.lateralVel *= 0.65;
@@ -3834,6 +4224,31 @@
     ai.lane = clamp(ai.lane - push * 0.13, -0.85, 0.85);
     if (rel > 0) ai.speed *= 1.04;
     showToast('CONTACT · 保持走线', 900);
+  }
+
+  function updateDailyProgress(rank) {
+    const daily = ensureDaily();
+    const p = daily.progress;
+    p.races += 1;
+    if (rank <= 3) p.podiums += 1;
+    if (rank === 1) p.wins += 1;
+    p.drift += race.driftTime;
+    p.nitro += race.nitroTime;
+    p.topSpeed = Math.max(p.topSpeed, Math.round(player.topSpeed * 0.0265));
+    p.cleanLaps += race.cleanLaps;
+    const completed = [];
+    daily.ids.forEach((id) => {
+      const challenge = dailyChallengeById(id);
+      if (!challenge || daily.claimed.includes(id)) return;
+      if ((p[challenge.metric] || 0) >= challenge.target) {
+        daily.claimed.push(id);
+        profile.coins += challenge.reward;
+        profile.stats.dailies += 1;
+        completed.push(challenge);
+      }
+    });
+    saveProfile();
+    return completed;
   }
 
   function finishRace() {
@@ -3873,6 +4288,13 @@
     }
     const newLap = !!(player.bestLap && record.bestLap && Math.abs(record.bestLap - player.bestLap) < 0.0005);
 
+    profile.stats.driftTime += race.driftTime;
+    profile.stats.nitroTime += race.nitroTime;
+    profile.stats.cleanLaps += race.cleanLaps;
+    profile.stats.topSpeed = Math.max(profile.stats.topSpeed, Math.round(player.topSpeed * 0.0265));
+    if (newRecord) profile.stats.records += 1;
+    const leaderboardPos = addLeaderboardEntry(race.trackId, race.time, rank, player.carId);
+
     const baseReward = [300, 200, 140, 95, 70, 55][rank - 1] || 50;
     let eventBonus = 0;
     let eventCompletedNow = false;
@@ -3899,6 +4321,11 @@
     profile.races += 1;
     if (rank === 1) profile.wins += 1;
     if (rank <= 3) profile.podiums += 1;
+
+    const dailyCompletions = updateDailyProgress(rank);
+    const newAchievements = checkAchievements();
+    const dailyReward = dailyCompletions.reduce((sum, c) => sum + c.reward, 0);
+    const achievementReward = newAchievements.reduce((sum, a) => sum + a.reward, 0);
     saveProfile();
     updateProfileUI();
 
@@ -3919,6 +4346,11 @@
       event: currentEvent,
       trackName: currentTrackDef().name,
       totalLaps: race.totalLaps,
+      dailyCompletions,
+      newAchievements,
+      dailyReward,
+      achievementReward,
+      leaderboardPos: leaderboardPos >= 0 ? leaderboardPos + 1 : null,
     };
 
     showTouch(false);
@@ -3965,6 +4397,19 @@
     }
     if (result.eventCompletedNow && result.unlockedNext) {
       chips.push(`<div class="reward-chip unlock">解锁赛事 <b>${result.unlockedNext.name}</b></div>`);
+    }
+    if (result.dailyCompletions && result.dailyCompletions.length) {
+      result.dailyCompletions.forEach((challenge) => {
+        chips.push(`<div class="reward-chip unlock">每日挑战 <b>${challenge.name} +${challenge.reward} CR</b></div>`);
+      });
+    }
+    if (result.newAchievements && result.newAchievements.length) {
+      result.newAchievements.forEach((ach) => {
+        chips.push(`<div class="reward-chip record">成就 <b>${ach.cn} +${ach.reward} CR</b></div>`);
+      });
+    }
+    if (result.leaderboardPos && result.leaderboardPos <= 5) {
+      chips.push(`<div class="reward-chip">本地榜 <b>#${result.leaderboardPos}</b></div>`);
     }
     ui.resultExtra.innerHTML = chips.join('');
 
@@ -4133,6 +4578,16 @@
       ui.deltaValue.className = '';
     }
 
+    const ghostTime = ghostTimeAtProgress(player.progress);
+    if (ghostTime !== null && race.mode === 'racing' && race.ghost && race.ghost.visible) {
+      const diff = race.time - ghostTime;
+      ui.ghostDelta.textContent = `${diff >= 0 ? '+' : ''}${diff.toFixed(3)}`;
+      ui.ghostDelta.className = diff <= 0 ? 'better' : 'slower';
+    } else {
+      ui.ghostDelta.textContent = '--.---';
+      ui.ghostDelta.className = '';
+    }
+
     const slip = player.slipstream > 0.22 && player.speed > 5000 && race.mode === 'racing';
     ui.slipstreamBadge.classList.toggle('show', slip);
     if (slip) ui.slipstreamBadge.textContent = `SLIPSTREAM ${Math.round(player.slipstream * 100)}%`;
@@ -4195,6 +4650,8 @@
         startQuickRace();
       } else if (!ui.career.classList.contains('is-hidden')) {
         closeCareer();
+      } else if (!ui.profileScreen.classList.contains('is-hidden')) {
+        closeProfile();
       } else if (race.mode === 'racing') {
         pauseRace();
       } else if (race.mode === 'paused') {
@@ -4227,22 +4684,24 @@
     const setupOpen = !ui.setup.classList.contains('is-hidden');
     const careerOpen = !ui.career.classList.contains('is-hidden');
     const settingsOpen = !ui.settings.classList.contains('is-hidden');
+    const profileOpen = !ui.profileScreen.classList.contains('is-hidden');
 
     if (code === 'Escape') {
       if (settingsOpen) { closeSettings(); return; }
       if (setupOpen) { closeSetup(); return; }
       if (careerOpen) { closeCareer(); return; }
+      if (profileOpen) { closeProfile(); return; }
       if (race.mode === 'racing') { pauseRace(); return; }
       if (race.mode === 'paused') { resumeRace(); return; }
     }
     if (code === 'Enter' || code === 'NumpadEnter') {
       if (settingsOpen) { closeSettings(); return; }
       if (setupOpen) { startQuickRace(); return; }
-      if (careerOpen) return;
+      if (careerOpen || profileOpen) return;
       if (race.mode === 'menu') openSetup();
       else if (race.mode === 'finished') startRace();
     }
-    if (settingsOpen || setupOpen || careerOpen) {
+    if (settingsOpen || setupOpen || careerOpen || profileOpen) {
       if (code === 'KeyM') toggleMute();
       return;
     }
@@ -4255,7 +4714,7 @@
     if (code === 'KeyR' && (race.mode === 'racing' || race.mode === 'paused' || race.mode === 'finished')) {
       startRace();
     }
-    if (race.mode === 'menu' && code === 'Space' && !setupOpen && !careerOpen && !settingsOpen) openSetup();
+    if (race.mode === 'menu' && code === 'Space' && !setupOpen && !careerOpen && !settingsOpen && !profileOpen) openSetup();
   }
 
   function keyUp(e) {
@@ -4341,6 +4800,7 @@
     setScreen(ui.pause, false);
     setScreen(ui.results, false);
     setScreen(ui.career, false);
+    setScreen(ui.profileScreen, false);
     setScreen(ui.setup, false);
     setScreen(ui.settings, false);
     setScreen(ui.menu, true);
@@ -4359,6 +4819,8 @@
   $('setupStartBtn').addEventListener('click', startQuickRace);
   $('careerBtn').addEventListener('click', openCareer);
   $('careerBackBtn').addEventListener('click', closeCareer);
+  $('profileBtn').addEventListener('click', () => openProfile('daily'));
+  $('profileBackBtn').addEventListener('click', closeProfile);
   $('settingsBtn').addEventListener('click', () => openSettings('menu'));
   $('pauseSettingsBtn').addEventListener('click', () => openSettings('pause'));
   $('settingsCloseBtn').addEventListener('click', closeSettings);
@@ -4418,6 +4880,19 @@
     const btn = e.target.closest('[data-event]');
     if (!btn) return;
     startCareerEvent(btn.getAttribute('data-event'));
+  });
+
+  ui.upgradeList.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-upgrade]');
+    if (!btn || btn.disabled) return;
+    buyUpgrade(btn.getAttribute('data-upgrade'));
+  });
+
+  ui.profileTabs.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-profile-tab]');
+    if (!btn) return;
+    profileTab = btn.getAttribute('data-profile-tab');
+    renderProfile();
   });
 
   [ui.setDifficulty, ui.setAssist, ui.setCamera, ui.setAutoThrottle, ui.setGhost].forEach((el) => {

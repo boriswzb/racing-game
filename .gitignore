@@ -4,6 +4,7 @@ package-lock.json
 test-*.js
 tmp-*.js
 v2-*.png
+v3-*.png
 *.log
 .DS_Store
 Thumbs.db

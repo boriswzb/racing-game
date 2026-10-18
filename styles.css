@@ -484,6 +484,8 @@ button { font: inherit; color: inherit; }
   pointer-events: none;
 }
 
+.race-toast.overlay-toast { z-index: 80; top: 8%; }
+
 .race-toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* --------------------------------- Screens -------------------------------- */
@@ -1296,6 +1298,141 @@ kbd {
 .reward-chip.unlock { border-color: rgba(255, 45, 149, 0.4); color: var(--pink-soft); }
 .reward-chip.unlock b { color: #fff; font-size: 10px; }
 
+/* -------------------------------- 3.0 Garage ------------------------------ */
+
+.upgrade-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.upgrade-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 7px 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+.upgrade-head b { font-family: var(--display); font-size: 15px; font-style: italic; color: rgba(255, 255, 255, 0.82); }
+.upgrade-head em { margin-left: auto; color: var(--amber); font-style: normal; font-size: 9px; }
+.upgrade-head small { color: rgba(255, 255, 255, 0.3); font-size: 8px; }
+.upgrade-row {
+  display: grid;
+  grid-template-columns: 1.15fr 0.9fr 132px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 2px solid var(--uc, var(--cyan));
+  background: linear-gradient(100deg, rgba(15, 5, 29, 0.9), rgba(7, 2, 17, 0.6));
+}
+.upgrade-name { display: flex; flex-direction: column; gap: 1px; }
+.upgrade-name span { color: var(--uc, var(--cyan)); font-size: 7px; letter-spacing: 0.18em; }
+.upgrade-name b { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+.upgrade-name small { color: rgba(255, 255, 255, 0.28); font-size: 7px; }
+.upgrade-level { display: flex; flex-direction: column; gap: 4px; }
+.upgrade-level small { color: rgba(255, 255, 255, 0.3); font-size: 7px; letter-spacing: 0.09em; }
+.upgrade-pips { display: flex; gap: 3px; }
+.upgrade-pips i { width: 16px; height: 4px; background: rgba(255, 255, 255, 0.1); transform: skewX(-24deg); }
+.upgrade-pips i.on { background: var(--uc, var(--cyan)); box-shadow: 0 0 7px var(--uc, var(--cyan)); }
+.upgrade-row button {
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+.upgrade-row button:hover:not(:disabled) { border-color: var(--uc, var(--cyan)); background: rgba(39, 230, 255, 0.09); color: #fff; }
+.upgrade-row button:disabled { opacity: 0.32; cursor: default; }
+
+.ghost-delta span { color: var(--cyan); }
+.ghost-delta b { color: rgba(255, 255, 255, 0.36); }
+
+/* Driver profile */
+.profile-screen {
+  background:
+    radial-gradient(60% 50% at 50% 0%, rgba(39, 230, 255, 0.08), transparent 70%),
+    linear-gradient(180deg, rgba(4, 1, 12, 0.985) 0%, rgba(4, 1, 12, 0.97) 50%, rgba(4, 1, 12, 0.995) 100%);
+}
+.profile-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  margin: 20px 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.07);
+}
+.profile-stat { padding: 11px 14px; background: rgba(7, 2, 17, 0.94); }
+.profile-stat span { display: block; color: rgba(255, 255, 255, 0.3); font-size: 7px; letter-spacing: 0.16em; margin-bottom: 3px; }
+.profile-stat b { font-family: var(--display); font-size: 20px; font-style: italic; }
+.profile-stat small { font-family: var(--body); font-size: 7px; color: rgba(255, 255, 255, 0.3); margin-left: 3px; font-style: normal; }
+
+.profile-tabs { display: flex; gap: 3px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 14px; }
+.profile-tabs button {
+  padding: 10px 18px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 9px;
+  letter-spacing: 0.13em;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.profile-tabs button:hover { color: #fff; background: rgba(255, 255, 255, 0.03); }
+.profile-tabs button.active { color: #fff; border-color: var(--pink); background: rgba(255, 45, 149, 0.07); }
+
+.profile-content { padding-bottom: 30px; }
+.profile-section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 2px 0 11px; }
+.profile-section-head > div span { color: var(--pink); font-size: 7px; letter-spacing: 0.26em; font-weight: 700; }
+.profile-section-head h3 { margin: 3px 0 0; font-family: var(--display); font-size: 24px; font-style: italic; letter-spacing: -0.01em; }
+.profile-section-head p { margin: 0; color: rgba(255, 255, 255, 0.3); font-size: 8px; letter-spacing: 0.06em; }
+.profile-note { margin-top: 12px; color: rgba(255, 255, 255, 0.27); font-size: 8px; letter-spacing: 0.07em; }
+
+.daily-list { display: flex; flex-direction: column; gap: 7px; }
+.daily-card { display: grid; grid-template-columns: 52px 1fr 100px; align-items: center; gap: 15px; padding: 13px 16px; border: 1px solid rgba(255, 255, 255, 0.08); border-left: 2px solid var(--dc, var(--pink)); background: linear-gradient(100deg, rgba(16, 5, 30, 0.92), rgba(7, 2, 17, 0.7)); }
+.daily-card.done { background: linear-gradient(100deg, rgba(14, 31, 28, 0.9), rgba(7, 2, 17, 0.7)); }
+.daily-icon, .achievement-icon { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid rgba(255, 255, 255, 0.13); border-radius: 50%; color: var(--dc, var(--pink)); font-family: var(--display); font-size: 12px; font-style: italic; }
+.daily-card.done .daily-icon { background: rgba(82, 255, 184, 0.13); color: #52ffb8; border-color: rgba(82, 255, 184, 0.4); }
+.daily-main { min-width: 0; }
+.daily-main > span { color: rgba(255, 255, 255, 0.28); font-size: 7px; letter-spacing: 0.14em; }
+.daily-main b { display: block; margin-top: 2px; font-size: 12px; font-weight: 700; letter-spacing: 0.02em; }
+.daily-state { text-align: right; }
+.daily-state b { display: block; font-family: var(--display); font-size: 17px; font-style: italic; color: var(--dc, var(--pink)); }
+.daily-state small { display: block; color: rgba(255, 255, 255, 0.28); font-size: 7px; letter-spacing: 0.1em; }
+.progress-track { height: 3px; margin-top: 8px; background: rgba(255, 255, 255, 0.09); overflow: hidden; }
+.progress-track i { display: block; height: 100%; background: var(--dc, var(--pink)); box-shadow: 0 0 8px var(--dc, var(--pink)); }
+
+.achievement-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+.achievement-card { display: grid; grid-template-columns: 50px 1fr 90px; align-items: center; gap: 11px; padding: 11px 13px; border: 1px solid rgba(255, 255, 255, 0.08); background: linear-gradient(100deg, rgba(15, 5, 29, 0.9), rgba(7, 2, 17, 0.64)); opacity: 0.72; }
+.achievement-card.unlocked { opacity: 1; border-color: rgba(82, 255, 184, 0.24); background: linear-gradient(100deg, rgba(12, 30, 26, 0.9), rgba(7, 2, 17, 0.7)); }
+.achievement-card.unlocked .achievement-icon { border-color: rgba(82, 255, 184, 0.4); background: rgba(82, 255, 184, 0.1); color: #52ffb8; }
+.achievement-main { min-width: 0; }
+.achievement-main > span { color: var(--pink); font-size: 6px; letter-spacing: 0.18em; }
+.achievement-main b { display: block; margin-top: 1px; font-size: 12px; font-weight: 700; }
+.achievement-main small { display: block; color: rgba(255, 255, 255, 0.3); font-size: 7px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.achievement-reward { text-align: right; }
+.achievement-reward b { font-family: var(--display); font-size: 16px; font-style: italic; color: var(--amber); }
+.achievement-reward small { color: rgba(255, 255, 255, 0.3); font-size: 7px; margin-left: 2px; }
+.achievement-reward em { display: block; margin-top: 3px; color: rgba(255, 255, 255, 0.28); font-style: normal; font-size: 7px; letter-spacing: 0.05em; }
+
+.record-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
+.record-block { padding: 12px 14px; border: 1px solid rgba(255, 255, 255, 0.08); border-left: 2px solid var(--rc, var(--pink)); background: rgba(9, 3, 20, 0.78); }
+.record-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.record-head span { display: block; color: rgba(255, 255, 255, 0.26); font-size: 6px; letter-spacing: 0.17em; }
+.record-head b { display: block; font-family: var(--display); font-size: 16px; font-style: italic; letter-spacing: 0.01em; }
+.record-head em { color: var(--rc, var(--pink)); font-style: normal; font-family: var(--display); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.record-list { padding-top: 6px; display: flex; flex-direction: column; gap: 3px; }
+.record-row { display: grid; grid-template-columns: 18px 1fr 1fr 32px; gap: 6px; align-items: baseline; font-size: 8px; color: rgba(255, 255, 255, 0.35); }
+.record-row span { color: var(--rc, var(--pink)); font-family: var(--display); font-style: italic; }
+.record-row b { color: rgba(255, 255, 255, 0.8); font-family: var(--display); font-style: italic; font-variant-numeric: tabular-nums; }
+.record-row em { font-style: normal; color: rgba(255, 255, 255, 0.34); }
+.record-row small { text-align: right; color: rgba(255, 255, 255, 0.26); }
+.record-empty { padding: 9px 0; color: rgba(255, 255, 255, 0.24); font-size: 8px; letter-spacing: 0.06em; }
+
 @media (max-width: 1080px) {
   .menu-side-note { display: none; }
   .game-title { font-size: clamp(66px, 11.8vw, 148px); }
@@ -1469,6 +1606,7 @@ kbd {
 }
 
 @media (max-width: 1080px) {
+  .upgrade-list { grid-template-columns: 1fr; }
   .minimap-panel { width: 168px; top: 108px; }
   .race-data-card { width: 258px; }
   .profile-chip { right: clamp(26px, 4vw, 50px); }
@@ -1490,8 +1628,10 @@ kbd {
   .profile-chip > span:first-of-type { display: none; }
   .profile-chip i { margin: 0 3px; }
   .menu-subactions { width: 100%; margin-bottom: 16px; }
-  .subaction-btn { flex: 1; min-width: 0; padding: 9px 11px; }
-  .subaction-icon { width: 26px; height: 26px; font-size: 13px; }
+  .subaction-btn { flex: 1; min-width: 0; padding: 8px 7px; gap: 7px; }
+  .subaction-icon { width: 22px; height: 22px; font-size: 11px; }
+  .subaction-btn b { font-size: 10px; letter-spacing: 0.03em; white-space: nowrap; }
+  .subaction-btn small { font-size: 6px; letter-spacing: 0.12em; }
   .menu-footer { margin-top: auto; }
   .minimap-panel, .race-data-card { display: none; }
   .start-lights { gap: 7px; margin-bottom: 18px; }
@@ -1612,3 +1752,55 @@ kbd {
   filter: grayscale(0.45) brightness(0.62);
 }
 .career-screen .career-event.available:hover { background: rgba(255, 45, 149, 0.12); }
+
+@media (max-width: 760px) {
+  .upgrade-head { flex-wrap: wrap; gap: 4px 8px; }
+  .upgrade-head em { margin-left: 0; }
+  .upgrade-head small { margin-left: auto; }
+  .upgrade-row {
+    grid-template-columns: 1fr auto;
+    gap: 6px 10px;
+    padding: 9px 10px;
+  }
+  .upgrade-name { grid-column: 1; }
+  .upgrade-level { grid-column: 1; flex-direction: row; align-items: center; gap: 8px; }
+  .upgrade-level small { white-space: nowrap; }
+  .upgrade-row button { grid-column: 2; grid-row: 1 / 3; padding: 8px 7px; font-size: 7px; }
+  .upgrade-pips i { width: 11px; }
+  .profile-summary { grid-template-columns: repeat(2, 1fr); margin: 14px 0 12px; }
+  .profile-stat { padding: 9px 11px; }
+  .profile-stat b { font-size: 18px; }
+  .profile-tabs { gap: 0; }
+  .profile-tabs button { flex: 1; padding: 9px 4px; font-size: 8px; letter-spacing: 0.04em; }
+  .profile-section-head { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .profile-section-head h3 { font-size: 20px; }
+  .profile-section-head p { font-size: 7px; }
+  .daily-card { grid-template-columns: 38px 1fr 65px; gap: 9px; padding: 10px; }
+  .daily-icon, .achievement-icon { width: 30px; height: 30px; font-size: 10px; }
+  .daily-main b { font-size: 11px; }
+  .daily-state b { font-size: 14px; }
+  .achievement-list { grid-template-columns: 1fr; }
+  .achievement-card { grid-template-columns: 42px 1fr 76px; gap: 9px; padding: 9px 10px; }
+  .achievement-main b { font-size: 11px; }
+  .achievement-reward b { font-size: 14px; }
+  .record-grid { grid-template-columns: 1fr; }
+  .record-block { padding: 10px 12px; }
+  .record-head b { font-size: 14px; }
+  .record-head em { font-size: 10px; }
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .upgrade-row { padding: 6px 10px; gap: 8px; }
+  .upgrade-head { padding: 5px 10px; }
+  .upgrade-name small { display: none; }
+  .upgrade-level small { display: none; }
+  .upgrade-pips i { width: 13px; height: 3px; }
+  .profile-summary { margin: 8px 0 8px; }
+  .profile-stat { padding: 6px 10px; }
+  .profile-stat b { font-size: 16px; }
+  .profile-tabs { margin-bottom: 8px; }
+  .profile-tabs button { padding: 7px 12px; }
+  .daily-card { padding: 8px 10px; }
+  .achievement-card { padding: 7px 9px; }
+  .record-block { padding: 8px 10px; }
+}

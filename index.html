@@ -85,6 +85,7 @@
           <span class="sector" data-sector="2"><i>S3</i><b id="sector3">--.--</b></span>
         </div>
         <div class="delta-row"><span>DELTA</span><b id="deltaValue">--.---</b></div>
+        <div class="delta-row ghost-delta"><span>GHOST</span><b id="ghostDelta">--.---</b></div>
         <div class="best-lap-card">
           <span>BEST LAP</span>
           <b id="bestLapHud">--:--.---</b>
@@ -150,6 +151,10 @@
             <span class="subaction-icon">⚙</span>
             <span><small>OPTIONS</small><b>设置</b></span>
           </button>
+          <button id="profileBtn" class="subaction-btn" type="button">
+            <span class="subaction-icon">◈</span>
+            <span><small>DRIVER</small><b>车手档案</b></span>
+          </button>
         </div>
 
         <div class="menu-footer">
@@ -201,6 +206,14 @@
             </div>
             <div id="carGrid" class="car-grid"></div>
           </section>
+
+          <section class="setup-section">
+            <div class="section-head">
+              <h3><i>03</i> 改装</h3>
+              <p>为当前赛车升级性能，改装永久保存</p>
+            </div>
+            <div id="upgradeList" class="upgrade-list"></div>
+          </section>
         </div>
 
         <footer class="setup-footer">
@@ -237,6 +250,33 @@
         <div class="career-summary" id="careerSummary"></div>
         <div class="career-loadout" id="careerLoadout"></div>
         <div class="career-list" id="careerList"></div>
+      </div>
+    </section>
+
+    <!-- 车手档案 -->
+    <section id="profileScreen" class="screen subpage profile-screen is-hidden">
+      <div class="subpage-shell">
+        <header class="subpage-head">
+          <button id="profileBackBtn" class="back-btn" type="button"><span>←</span> 主菜单</button>
+          <div class="subpage-title">
+            <span>DRIVER FILE / NIGHT DIVISION</span>
+            <h2>车手档案</h2>
+          </div>
+          <div class="wallet">
+            <span>CREDITS</span>
+            <b id="profileCoinsLarge">400</b>
+            <small>CR</small>
+          </div>
+        </header>
+
+        <div class="profile-summary" id="profileSummary"></div>
+
+        <div class="profile-tabs" id="profileTabs">
+          <button type="button" class="active" data-profile-tab="daily">每日挑战</button>
+          <button type="button" data-profile-tab="achievements">成就</button>
+          <button type="button" data-profile-tab="records">赛道纪录</button>
+        </div>
+        <div class="profile-content" id="profileContent"></div>
       </div>
     </section>
 
