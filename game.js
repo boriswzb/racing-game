@@ -452,6 +452,8 @@
   let selectedTrackId = TRACK_BY_ID[profile.lastTrack] ? profile.lastTrack : 'midnight';
   let selectedCarId = profile.cars.includes(profile.lastCar) ? profile.lastCar : 'vanta';
   let currentEvent = null;
+  let currentChallenge = null;
+  let challengeView = null;
   let currentRaceMode = 'QUICK RACE';
   let profileTab = 'daily';
   ensureDaily();
@@ -2316,6 +2318,18 @@
     setup: $('setupScreen'),
     career: $('careerScreen'),
     profileScreen: $('profileScreen'),
+    challengeScreen: $('challengeScreen'),
+    challengeTitle: $('challengeTitle'),
+    challengeSub: $('challengeSub'),
+    challengeInfo: $('challengeInfo'),
+    challengeImportBox: $('challengeImportBox'),
+    challengeInput: $('challengeInput'),
+    challengeParseBtn: $('challengeParseBtn'),
+    challengeError: $('challengeError'),
+    challengeAcceptBtn: $('challengeAcceptBtn'),
+    challengeShareBtn: $('challengeShareBtn'),
+    challengeCloseBtn: $('challengeCloseBtn'),
+    challengeShareResult: $('challengeShareResult'),
     settings: $('settingsScreen'),
     pause: $('pauseScreen'),
     results: $('results'),
@@ -2722,13 +2736,16 @@
         return `<div class="record-block" style="--rc:${THEMES[track.theme].accent}">
           <div class="record-head"><div><span>${track.sector}</span><b>${track.name}</b></div>
             <div class="record-head-right"><em>BEST ${record.bestTime ? formatTime(record.bestTime) : '--:--.---'}</em>
-            ${record.replay ? `<button class="record-replay" type="button" data-replay-track="${track.id}">回放</button>` : ''}</div>
+            ${record.replay ? `<button class="record-replay" type="button" data-replay-track="${track.id}">回放</button>` : ''}
+            ${record.ghost ? `<button class="record-replay challenge" type="button" data-challenge-track="${track.id}">挑战</button>` : ''}</div>
           </div>
           <div class="record-list">${rows}</div>
         </div>`;
       }).join('');
       ui.profileContent.innerHTML = `
-        <div class="profile-section-head"><div><span>TRACK RECORDS</span><h3>本地 Top 5</h3></div><p>你的每一条赛道纪录</p></div>
+        <div class="profile-section-head"><div><span>TRACK RECORDS</span><h3>本地 Top 5</h3></div>
+          <div class="record-head-actions"><p>你的每一条赛道纪录</p><button class="record-import" type="button" data-challenge-import>导入挑战</button></div>
+        </div>
         <div class="record-grid">${blocks}</div>`;
     }
   }
@@ -2750,8 +2767,261 @@
     updateProfileUI();
   }
 
-  function renderSettings() {
-    const s = getSettings();
+  /* ----------------------------- Ghost Challenge ---------------------------- */
+
+  function compactChallengeSamples(samples, max = 180) {
+    if (!Array.isArray(samples) || samples.length < 2) return [];
+    const clean = samples
+      .filter((s) => s && Number.isFinite(s.t) && Number.isFinite(s.p) && Number.isFinite(s.x))
+      .sort((a, b) => a.t - b.t);
+    if (clean.length < 2) return [];
+    const picked = [];
+    if (clean.length <= max) {
+      clean.forEach((s) => picked.push(s));
+    } else {
+      const step = (clean.length - 1) / (max - 1);
+      for (let i = 0; i < max; i++) {
+        picked.push(clean[Math.round(i * step)]);
+      }
+      picked[picked.length - 1] = clean[clean.length - 1];
+    }
+    const flat = [];
+    picked.forEach((s) => {
+      flat.push(Math.round(s.t * 100) / 100, Math.round(s.p), Math.round(s.x * 1000) / 1000);
+    });
+    return flat;
+  }
+
+  function encodeChallenge(data) {
+    const payload = {
+      v: 1,
+      t: data.trackId,
+      l: data.laps,
+      c: data.carId,
+      g: Math.round(data.targetTime * 1000) / 1000,
+      s: compactChallengeSamples(data.ghost.samples),
+    };
+    const bytes = new TextEncoder().encode(JSON.stringify(payload));
+    let binary = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  function decodeChallenge(input) {
+    if (!input || typeof input !== 'string') return null;
+    let raw = input.trim();
+    const marker = raw.indexOf('#challenge=');
+    if (marker >= 0) raw = raw.slice(marker + 11);
+    else if (raw.startsWith('challenge=')) raw = raw.slice(10);
+    else if (raw.includes('challenge=')) raw = raw.slice(raw.indexOf('challenge=') + 10);
+    raw = decodeURIComponent(raw).replace(/\s+/g, '');
+    if (!raw) return null;
+    const padded = raw.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (raw.length % 4)) % 4);
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const payload = JSON.parse(new TextDecoder().decode(bytes));
+    if (!payload || payload.v !== 1) return null;
+    const track = Object.prototype.hasOwnProperty.call(TRACK_BY_ID, payload.t) ? TRACK_BY_ID[payload.t] : null;
+    if (!track) return null;
+    const targetTime = Number(payload.g);
+    if (!Number.isFinite(targetTime) || targetTime <= 0 || targetTime > 7200) return null;
+    const laps = clamp(parseInt(payload.l, 10) || track.laps, 1, 10);
+    const carId = Object.prototype.hasOwnProperty.call(CAR_BY_ID, payload.c) ? payload.c : 'vanta';
+    if (!Array.isArray(payload.s) || payload.s.length < 6 || payload.s.length % 3 !== 0) return null;
+    const maxProgress = track.segments * SEGMENT_LENGTH * 12;
+    const samples = [];
+    for (let i = 0; i + 2 < payload.s.length && samples.length < 320; i += 3) {
+      const t = Number(payload.s[i]);
+      const p = Number(payload.s[i + 1]);
+      const x = Number(payload.s[i + 2]);
+      if (!Number.isFinite(t) || !Number.isFinite(p) || !Number.isFinite(x)) continue;
+      if (t < 0 || p < 0 || p > maxProgress) continue;
+      samples.push({ t, p, x: clamp(x, -1.5, 1.5) });
+    }
+    if (samples.length < 2) return null;
+    samples.sort((a, b) => a.t - b.t);
+    return {
+      v: 1,
+      trackId: track.id,
+      laps,
+      carId,
+      targetTime,
+      ghost: {
+        time: targetTime,
+        carId,
+        samples,
+      },
+    };
+  }
+
+  function challengeUrl(data) {
+    const code = encodeChallenge(data);
+    const base = location.href.split('#')[0];
+    return { code, link: `${base}#challenge=${code}` };
+  }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (e) {
+      try {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        area.remove();
+        return ok;
+      } catch (err) {
+        return false;
+      }
+    }
+  }
+
+  function challengeInfoMarkup(data) {
+    const track = TRACK_BY_ID[data.trackId];
+    const car = CAR_BY_ID[data.carId] || CAR_BY_ID.vanta;
+    return `
+      <div><span>TRACK</span><b>${track.name}</b><small>${track.cn}</small></div>
+      <div><span>TARGET</span><b>${formatTime(data.targetTime)}</b><small>${data.laps} LAPS</small></div>
+      <div><span>GHOST CAR</span><b>${car.name}</b><small>${car.tag}</small></div>`;
+  }
+
+  function showChallengeData(data, mode = 'inbound') {
+    if (!data) return;
+    challengeView = { data, mode, code: encodeChallenge(data) };
+    ui.challengeTitle.textContent = mode === 'share' ? '幽灵挑战' : '收到挑战';
+    ui.challengeSub.textContent = mode === 'share'
+      ? '把这条挑战链接发给好友，看他们能否击败你的幽灵。'
+      : '接受后使用当前赛车与这条幽灵同场竞速，目标时间已记录在挑战中。';
+    ui.challengeInfo.innerHTML = challengeInfoMarkup(data);
+    ui.challengeImportBox.classList.add('is-hidden');
+    ui.challengeAcceptBtn.classList.remove('is-hidden');
+    ui.challengeShareBtn.classList.remove('is-hidden');
+    ui.challengeError.textContent = '';
+    ui.challengeShareResult.innerHTML = '';
+    setScreen(ui.challengeScreen, true);
+  }
+
+  function showChallengeImport() {
+    challengeView = { data: null, mode: 'import', code: '' };
+    ui.challengeTitle.textContent = '导入挑战';
+    ui.challengeSub.textContent = '粘贴好友发来的挑战链接或挑战代码。';
+    ui.challengeInfo.innerHTML = '';
+    ui.challengeImportBox.classList.remove('is-hidden');
+    ui.challengeAcceptBtn.classList.add('is-hidden');
+    ui.challengeShareBtn.classList.add('is-hidden');
+    ui.challengeInput.value = '';
+    ui.challengeError.textContent = '';
+    ui.challengeShareResult.innerHTML = '';
+    setScreen(ui.challengeScreen, true);
+    setTimeout(() => ui.challengeInput.focus(), 120);
+  }
+
+  function closeChallenge() {
+    setScreen(ui.challengeScreen, false);
+    challengeView = null;
+  }
+
+  function parseChallengeInput() {
+    let data = null;
+    try {
+      data = decodeChallenge(ui.challengeInput.value);
+    } catch (e) {
+      data = null;
+    }
+    if (!data) {
+      ui.challengeError.textContent = '无法解析挑战：链接或代码无效、已损坏或版本不兼容。';
+      return;
+    }
+    ui.challengeError.textContent = '';
+    showChallengeData(data, 'inbound');
+  }
+
+  function acceptChallenge() {
+    const data = challengeView && challengeView.data;
+    if (!data) return;
+    closeChallenge();
+    currentChallenge = data;
+    currentEvent = null;
+    currentRaceMode = 'GHOST DUEL';
+    selectedTrackId = data.trackId;
+    profile.lastTrack = data.trackId;
+    applyTrack(data.trackId, true);
+    saveProfile();
+    setScreen(ui.profileScreen, false);
+    setScreen(ui.menu, false);
+    setScreen(ui.results, false);
+    startRace();
+  }
+
+  async function shareChallengeLink() {
+    const data = challengeView && challengeView.data;
+    if (!data) return;
+    const { code, link } = challengeUrl(data);
+    challengeView.code = code;
+    const copied = await copyText(link);
+    const localHint = location.protocol === 'file:'
+      ? '<small>当前是本地文件，需使用线上版链接分享。</small>'
+      : '<small>链接包含幽灵轨迹，不会上传服务器。</small>';
+    ui.challengeShareResult.innerHTML = `<b>${copied ? '挑战链接已复制' : '复制失败，请手动复制：'}</b>${localHint}<textarea readonly rows="3">${link}</textarea>`;
+    showToast(copied ? 'CHALLENGE LINK COPIED' : 'COPY FAILED', 1800, true);
+  }
+
+  function makeChallengeFromRecord(trackId) {
+    const record = getTrackRecord(trackId);
+    if (!record.ghost || !Array.isArray(record.ghost.samples) || record.ghost.samples.length < 2) return null;
+    const track = TRACK_BY_ID[trackId];
+    if (!track) return null;
+    const targetTime = record.bestTime || record.ghost.time || 0;
+    if (!targetTime || targetTime <= 0) return null;
+    return {
+      v: 1,
+      trackId,
+      laps: record.laps || (record.replay && record.replay.totalLaps) || track.laps,
+      carId: record.ghost.carId || 'vanta',
+      targetTime,
+      ghost: {
+        time: record.ghost.time || targetTime,
+        carId: record.ghost.carId || 'vanta',
+        samples: record.ghost.samples,
+      },
+    };
+  }
+
+  function openChallengeShare(trackId) {
+    const data = makeChallengeFromRecord(trackId);
+    if (!data) {
+      showToast('该赛道还没有可分享的幽灵纪录', 1900, true);
+      return;
+    }
+    showChallengeData(data, 'share');
+  }
+
+  function loadChallengeFromHash() {
+    const hash = location.hash || '';
+    if (!hash.includes('challenge=')) return;
+    let data = null;
+    try {
+      data = decodeChallenge(hash);
+    } catch (e) {
+      data = null;
+    }
+    try {
+      history.replaceState(null, '', location.pathname + location.search);
+    } catch (e) { /* noop */ }
+    if (data) showChallengeData(data, 'inbound');
+    else showToast('挑战链接无效或已损坏', 2200, true);
+  }
+
+  function renderSettings() {    const s = getSettings();
     ui.setDifficulty.value = s.difficulty;
     ui.setAssist.value = s.assist;
     ui.setCamera.value = s.camera;
@@ -2842,6 +3112,7 @@
 
   function openSetup() {
     currentEvent = null;
+    currentChallenge = null;
     currentRaceMode = 'QUICK RACE';
     setScreen(ui.menu, false);
     setScreen(ui.career, false);
@@ -2861,6 +3132,7 @@
 
   function openCareer() {
     currentEvent = null;
+    currentChallenge = null;
     setScreen(ui.menu, false);
     setScreen(ui.setup, false);
     setScreen(ui.profileScreen, false);
@@ -2899,6 +3171,7 @@
 
   function startQuickRace() {
     currentEvent = null;
+    currentChallenge = null;
     currentRaceMode = 'QUICK RACE';
     setScreen(ui.setup, false);
     setScreen(ui.menu, false);
@@ -2913,6 +3186,7 @@
     const index = CAREER_EVENTS.indexOf(event);
     if (!eventUnlocked(index)) return;
     currentEvent = event;
+    currentChallenge = null;
     currentRaceMode = `CAREER · ${event.name}`;
     selectedTrackId = event.track;
     profile.lastTrack = event.track;
@@ -3796,7 +4070,11 @@
     applyCarStats(car);
     const difficultyKey = currentEvent ? currentEvent.difficulty : getSettings().difficulty;
     const difficulty = DIFFICULTY[difficultyKey] || DIFFICULTY.standard;
-    race.totalLaps = currentEvent ? currentEvent.laps : trackDef.laps;
+    race.totalLaps = currentChallenge
+      ? currentChallenge.laps
+      : currentEvent
+        ? currentEvent.laps
+        : trackDef.laps;
     race.trackId = trackDef.id;
     race.eventId = currentEvent ? currentEvent.id : null;
     race.aiSkill = difficulty.ai * trackDef.aiSkill;
@@ -3877,8 +4155,9 @@
     race.nitroTime = 0;
     race.cleanLaps = 0;
     race.lapClean = true;
-    const ghostData = record.ghost;
-    race.ghost = getSettings().ghost && ghostData && Array.isArray(ghostData.samples) && ghostData.samples.length > 1
+    const ghostData = currentChallenge ? currentChallenge.ghost : record.ghost;
+    const ghostEnabled = currentChallenge ? true : getSettings().ghost;
+    race.ghost = ghostEnabled && ghostData && Array.isArray(ghostData.samples) && ghostData.samples.length > 1
       ? {
         visible: true,
         carId: ghostData.carId || 'vanta',
@@ -3889,12 +4168,17 @@
         idx: 0,
       }
       : null;
+    race.challenge = currentChallenge;
     particles.length = 0;
     setStartLights(-1, false);
 
     ui.lapTotal.textContent = `/${race.totalLaps}`;
     ui.modeLabel.textContent = currentRaceMode;
-    ui.eventLabel.textContent = currentEvent ? `${trackDef.name} · ${currentEvent.name}` : trackDef.name;
+    ui.eventLabel.textContent = currentChallenge
+      ? `${trackDef.name} · GHOST DUEL`
+      : currentEvent
+        ? `${trackDef.name} · ${currentEvent.name}`
+        : trackDef.name;
     ui.mapTrackName.textContent = trackDef.name;
     ui.bestLapHud.textContent = record.bestLap ? formatTime(record.bestLap) : '--:--.---';
     ui.sector1.textContent = '--.--';
@@ -3937,6 +4221,7 @@
     setScreen(ui.results, false);
     setScreen(ui.pause, false);
     setScreen(ui.replayScreen, false);
+    setScreen(ui.challengeScreen, false);
     showRaceHud(true);
     showTouch(true);
     ui.countdown.classList.remove('is-hidden');
@@ -3959,7 +4244,11 @@
     audio.countdown(true);
     showTouch(true);
     setStartLights(4, true);
-    const label = currentEvent ? currentEvent.name : currentTrackDef().name;
+    const label = currentChallenge
+      ? 'GHOST DUEL'
+      : currentEvent
+        ? currentEvent.name
+        : currentTrackDef().name;
     setTimeout(() => {
       if (race.mode === 'racing' && race.time > 0.5) {
         showToast(`${label} · ${race.totalLaps} LAPS`, 1500);
@@ -4393,6 +4682,9 @@
     });
     const rank = 1 + finishedAI.length;
     race.position = rank;
+    const isChallenge = !!race.challenge;
+    const challenge = race.challenge;
+    const challengeBeaten = isChallenge ? race.time <= challenge.targetTime : null;
     audio.finish(rank === 1);
 
     if (race.ghostSamples.length && race.ghostSamples[race.ghostSamples.length - 1].p < player.progress) {
@@ -4404,9 +4696,10 @@
 
     const record = getTrackRecord(race.trackId);
     const previousBest = record.bestTime || 0;
-    const newRecord = !previousBest || race.time < previousBest;
+    const newRecord = !isChallenge && (!previousBest || race.time < previousBest);
     if (newRecord) {
       record.bestTime = race.time;
+      record.laps = race.totalLaps;
       if (replayData) record.replay = replayData;
       if (race.ghostSamples.length > 1) {
         record.ghost = {
@@ -4416,14 +4709,14 @@
         };
       }
     }
-    const newLap = !!(player.bestLap && record.bestLap && Math.abs(record.bestLap - player.bestLap) < 0.0005);
+    const newLap = !isChallenge && !!(player.bestLap && record.bestLap && Math.abs(record.bestLap - player.bestLap) < 0.0005);
 
     profile.stats.driftTime += race.driftTime;
     profile.stats.nitroTime += race.nitroTime;
     profile.stats.cleanLaps += race.cleanLaps;
     profile.stats.topSpeed = Math.max(profile.stats.topSpeed, Math.round(player.topSpeed * 0.0265));
     if (newRecord) profile.stats.records += 1;
-    const leaderboardPos = addLeaderboardEntry(race.trackId, race.time, rank, player.carId);
+    const leaderboardPos = isChallenge ? -1 : addLeaderboardEntry(race.trackId, race.time, rank, player.carId);
 
     const baseReward = [300, 200, 140, 95, 70, 55][rank - 1] || 50;
     let eventBonus = 0;
@@ -4481,6 +4774,14 @@
       dailyReward,
       achievementReward,
       leaderboardPos: leaderboardPos >= 0 ? leaderboardPos + 1 : null,
+      challenge: isChallenge ? {
+        targetTime: challenge.targetTime,
+        laps: challenge.laps,
+        trackId: challenge.trackId,
+        carId: challenge.carId,
+        beaten: challengeBeaten,
+      } : null,
+      challengeBeaten,
     };
 
     showTouch(false);
@@ -4530,6 +4831,9 @@
     }
     if (result.eventCompletedNow && result.unlockedNext) {
       chips.push(`<div class="reward-chip unlock">解锁赛事 <b>${result.unlockedNext.name}</b></div>`);
+    }
+    if (result.challenge) {
+      chips.push(`<div class="reward-chip ${result.challengeBeaten ? 'record' : 'unlock'}">幽灵挑战 目标 <b>${formatTime(result.challenge.targetTime)}</b> · ${result.challengeBeaten ? '已击败' : '未击败'}</div>`);
     }
     if (result.dailyCompletions && result.dailyCompletions.length) {
       result.dailyCompletions.forEach((challenge) => {
@@ -5053,7 +5357,10 @@
 
     const start = !!(pad.buttons[9] && pad.buttons[9].pressed);
     if (start && !gamepadStartPrev) {
-      if (race.mode === 'replay') {
+      if (!ui.challengeScreen.classList.contains('is-hidden')) {
+        if (challengeView && challengeView.mode === 'import') closeChallenge();
+        else acceptChallenge();
+      } else if (race.mode === 'replay') {
         if (replayState.photo) exitPhotoMode();
         else toggleReplayPlay();
       } else if (!ui.settings.classList.contains('is-hidden')) {
@@ -5127,6 +5434,16 @@
       if (code === 'KeyF') {
         enterPhotoMode();
         return;
+      }
+      return;
+    }
+
+    const challengeOpen = !ui.challengeScreen.classList.contains('is-hidden');
+    if (challengeOpen) {
+      if (code === 'Escape') { closeChallenge(); return; }
+      if (code === 'KeyM') toggleMute();
+      if ((code === 'Enter' || code === 'NumpadEnter') && challengeView && challengeView.mode !== 'import') {
+        acceptChallenge();
       }
       return;
     }
@@ -5245,6 +5562,7 @@
 
   function quitToMenu() {
     currentEvent = null;
+    currentChallenge = null;
     currentRaceMode = 'QUICK RACE';
     race.mode = 'menu';
     setScreen(ui.pause, false);
@@ -5254,6 +5572,7 @@
     setScreen(ui.setup, false);
     setScreen(ui.settings, false);
     setScreen(ui.replayScreen, false);
+    setScreen(ui.challengeScreen, false);
     document.body.classList.remove('replay-mode');
     replayState.data = null;
     replayState.playing = false;
@@ -5275,6 +5594,13 @@
   $('careerBackBtn').addEventListener('click', closeCareer);
   $('profileBtn').addEventListener('click', () => openProfile('daily'));
   $('profileBackBtn').addEventListener('click', closeProfile);
+  $('challengeAcceptBtn').addEventListener('click', acceptChallenge);
+  $('challengeShareBtn').addEventListener('click', shareChallengeLink);
+  $('challengeCloseBtn').addEventListener('click', closeChallenge);
+  $('challengeParseBtn').addEventListener('click', parseChallengeInput);
+  ui.challengeInput.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') parseChallengeInput();
+  });
   $('settingsBtn').addEventListener('click', () => openSettings('menu'));
   $('pauseSettingsBtn').addEventListener('click', () => openSettings('pause'));
   $('settingsCloseBtn').addEventListener('click', closeSettings);
@@ -5382,6 +5708,16 @@
         photoRecordsCache.delete(remove.getAttribute('data-photo-delete'));
       } catch (err) { /* noop */ }
       renderPhotoGallery();
+      return;
+    }
+    const importBtn = e.target.closest('[data-challenge-import]');
+    if (importBtn) {
+      showChallengeImport();
+      return;
+    }
+    const challengeBtn = e.target.closest('[data-challenge-track]');
+    if (challengeBtn) {
+      openChallengeShare(challengeBtn.getAttribute('data-challenge-track'));
       return;
     }
     const btn = e.target.closest('[data-replay-track]');
@@ -5689,6 +6025,7 @@
   renderSetup();
   setStartLights(-1, false);
   setupPwa();
+  loadChallengeFromHash();
 
   if (window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
     document.body.classList.add('supports-touch');

@@ -286,6 +286,30 @@
       </div>
     </section>
 
+    <!-- 幽灵挑战 -->
+    <section id="challengeScreen" class="screen center-screen challenge-screen is-hidden">
+      <div class="modal-card challenge-card">
+        <div class="modal-eyebrow">GHOST DUEL / ASYNC CHALLENGE</div>
+        <h2 id="challengeTitle">幽灵挑战</h2>
+        <p id="challengeSub">接受挑战，与好友的最快幽灵同场竞速。</p>
+        <div class="challenge-info" id="challengeInfo"></div>
+
+        <div class="challenge-import is-hidden" id="challengeImportBox">
+          <label for="challengeInput">粘贴挑战链接或代码</label>
+          <textarea id="challengeInput" rows="4" spellcheck="false" placeholder="https://.../#challenge=..."></textarea>
+          <button id="challengeParseBtn" type="button">解析挑战</button>
+          <div class="challenge-error" id="challengeError"></div>
+        </div>
+
+        <div class="modal-actions challenge-actions">
+          <button id="challengeAcceptBtn" class="primary-btn" type="button">接受挑战</button>
+          <button id="challengeShareBtn" class="ghost-btn" type="button">复制挑战链接</button>
+          <button id="challengeCloseBtn" class="ghost-btn" type="button">关闭</button>
+        </div>
+        <div class="challenge-share-result" id="challengeShareResult"></div>
+      </div>
+    </section>
+
     <!-- 设置 -->
     <section id="settingsScreen" class="screen center-screen settings-screen is-hidden">
       <div class="modal-card settings-card">

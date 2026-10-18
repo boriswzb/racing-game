@@ -1,5 +1,5 @@
 /* NIGHTSHIFT service worker — offline shell for the static game. */
-const CACHE_NAME = 'nightshift-5.0.0';
+const CACHE_NAME = 'nightshift-6.0.0';
 const ASSETS = [
   './',
   './index.html',

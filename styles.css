@@ -1318,6 +1318,43 @@ kbd {
 .install-row.installed { border-color: rgba(82, 255, 184, 0.28); }
 .install-row.installed span, .install-row.installed button { color: #52ffb8; border-color: rgba(82, 255, 184, 0.35); }
 
+.challenge-screen { z-index: 58; }
+.challenge-card { width: min(570px, 94vw); }
+.challenge-card h2 { margin: 5px 0 0; font-family: var(--display); font-size: 34px; font-style: italic; letter-spacing: -0.01em; }
+.challenge-card > p { margin: 8px 0 0; color: rgba(255, 255, 255, 0.4); font-size: 10px; line-height: 1.6; }
+.challenge-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 18px; border: 1px solid rgba(255, 255, 255, 0.09); background: rgba(255, 255, 255, 0.08); }
+.challenge-info:empty { display: none; }
+.challenge-import.is-hidden { display: none; }
+.challenge-actions .is-hidden { display: none; }
+.challenge-info > div { padding: 10px 11px; background: rgba(8, 3, 20, 0.9); }
+.challenge-info span { display: block; color: rgba(255, 255, 255, 0.3); font-size: 7px; letter-spacing: 0.15em; }
+.challenge-info b { display: block; margin-top: 4px; font-family: var(--display); font-size: 17px; font-style: italic; font-variant-numeric: tabular-nums; }
+.challenge-info small { display: block; margin-top: 2px; color: rgba(255, 255, 255, 0.28); font-size: 7px; }
+.challenge-import { margin-top: 15px; }
+.challenge-import label { display: block; margin-bottom: 5px; color: rgba(255, 255, 255, 0.35); font-size: 8px; letter-spacing: 0.08em; }
+.challenge-import textarea {
+  width: 100%;
+  min-height: 84px;
+  resize: vertical;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(0, 0, 0, 0.32);
+  color: rgba(255, 255, 255, 0.78);
+  font-family: var(--body);
+  font-size: 9px;
+  line-height: 1.5;
+  outline: none;
+}
+.challenge-import textarea:focus { border-color: var(--pink); }
+.challenge-import > button { margin-top: 7px; padding: 7px 14px; border: 1px solid rgba(255, 45, 149, 0.4); background: rgba(255, 45, 149, 0.08); color: var(--pink-soft); font-size: 8px; cursor: pointer; }
+.challenge-error { min-height: 14px; margin-top: 5px; color: #ff6b9e; font-size: 8px; }
+.challenge-actions { margin-top: 18px; }
+.challenge-actions .primary-btn, .challenge-actions .ghost-btn { font-size: 11px; }
+.challenge-share-result { margin-top: 10px; color: rgba(255, 255, 255, 0.34); font-size: 8px; line-height: 1.6; word-break: break-all; }
+.challenge-share-result b { display: block; color: #52ffb8; font-size: 9px; letter-spacing: 0.06em; }
+.challenge-share-result small { display: block; margin-top: 3px; color: rgba(255, 255, 255, 0.26); font-size: 7px; }
+.challenge-share-result textarea { width: 100%; min-height: 52px; margin-top: 6px; padding: 7px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(0, 0, 0, 0.3); color: rgba(255, 255, 255, 0.6); font-size: 8px; }
+
 /* Results extras */
 .result-extra { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
 .reward-chip { display: flex; align-items: baseline; gap: 6px; padding: 6px 10px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.035); font-size: 8px; color: rgba(255, 255, 255, 0.4); letter-spacing: 0.08em; }
@@ -1482,6 +1519,21 @@ kbd {
   cursor: pointer;
 }
 .record-replay:hover { background: rgba(39, 230, 255, 0.14); }
+.record-replay.challenge { border-color: rgba(255, 45, 149, 0.35); color: var(--pink-soft); background: rgba(255, 45, 149, 0.06); }
+.record-replay.challenge:hover { background: rgba(255, 45, 149, 0.14); }
+.record-head-actions { display: flex; align-items: center; gap: 10px; }
+.record-head-actions p { margin: 0; color: rgba(255, 255, 255, 0.3); font-size: 8px; letter-spacing: 0.06em; }
+.record-import {
+  min-height: 24px;
+  padding: 3px 9px;
+  border: 1px solid rgba(255, 45, 149, 0.32);
+  background: rgba(255, 45, 149, 0.07);
+  color: var(--pink-soft);
+  font-size: 7px;
+  letter-spacing: 0.07em;
+  cursor: pointer;
+}
+.record-import:hover { background: rgba(255, 45, 149, 0.15); color: #fff; }
 
 /* Driver profile */
 .profile-screen {
@@ -1921,7 +1973,14 @@ kbd {
   .photo-bar small { flex: 1 0 100%; text-align: center; }
   .record-head { align-items: center; }
   .record-head em { font-size: 9px; }
+  .record-head-actions { flex-direction: column; align-items: flex-end; gap: 4px; }
+  .record-head-actions p { display: none; }
   .record-replay { padding: 2px 5px; font-size: 6px; }
+  .challenge-card h2 { font-size: 28px; }
+  .challenge-card > p { font-size: 9px; }
+  .challenge-info b { font-size: 14px; }
+  .challenge-info > div { padding: 8px 9px; }
+  .challenge-actions { flex-direction: column; }
   .upgrade-head { flex-wrap: wrap; gap: 4px 8px; }
   .upgrade-head em { margin-left: 0; }
   .upgrade-head small { margin-left: auto; }
