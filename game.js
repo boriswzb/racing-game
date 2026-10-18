@@ -1,5 +1,5 @@
 /* ==========================================================================
-   NIGHTSHIFT · 霓虹极速
+   开罗狂飙 · CAIRO RUSH
    A self-contained pseudo-3D arcade racer.
    ========================================================================== */
 (() => {
@@ -232,16 +232,36 @@
         rumbleA: '#35d9ff', rumbleB: '#ff76ae', lane: '#e8f5ff', fog: '#203955',
       },
     },
+    cairo: {
+      id: 'cairo',
+      decor: 'cairo',
+      sky: ['#07030b', '#160913', '#34131b', '#6e2c22', '#b8542f', '#eda24e', '#ffe3a3'],
+      sun: ['#fff9d8', '#ffe8a8', '#ffbf63', '#ff784c', '#b72f4f'],
+      haze: ['rgba(255,190,110,0)', 'rgba(255,151,79,0.24)', 'rgba(64,24,20,0)'],
+      far: { top: '#3d1c1e', bottom: '#1c0b10', rim: '#dd8b4c' },
+      near: { top: '#2b1217', bottom: '#0d0508', rim: '#2ee6d6' },
+      ground: ['#8b5b2f', '#4b2b1a', '#170b08'],
+      city: true,
+      cityDensity: 1.25,
+      cityWarm: 'rgba(255,183,94,0.58)',
+      cityCool: 'rgba(46,230,214,0.5)',
+      accent: '#ffb347',
+      accent2: '#2ee6d6',
+      palette: {
+        grassA: '#3b2518', grassB: '#4a2e1c', roadA: '#241a17', roadB: '#2b1f1a',
+        rumbleA: '#ffb347', rumbleB: '#2ee6d6', lane: '#fff1cf', fog: '#6a3a28',
+      },
+    },
   };
 
   const TRACK_DEFS = [
     {
       id: 'midnight',
-      name: 'MIDNIGHT LOOP',
-      cn: '午夜环线',
-      sector: 'SECTOR 09',
-      desc: '高速长弯与霓虹龙门，适合第一次夜跑。',
-      theme: 'midnight',
+      name: 'NILE CORNICHE',
+      cn: '尼罗河滨海道',
+      sector: 'SECTOR 01',
+      desc: '沿尼罗河高速飞驰，在开罗塔与宣礼塔之间连续换线。',
+      theme: 'cairo',
       segments: 1200,
       laps: 3,
       difficulty: '★★☆',
@@ -251,11 +271,11 @@
     },
     {
       id: 'harbor',
-      name: 'NEON HARBOR',
-      cn: '霓虹港湾',
-      sector: 'SECTOR 12',
-      desc: '连续低速 S 弯，节奏紧凑，出弯决定胜负。',
-      theme: 'harbor',
+      name: 'KHAN EL-KHALILI',
+      cn: '汗哈利利老城',
+      sector: 'SECTOR 07',
+      desc: '穿过老城灯巷与拱门，连续 S 弯里挤满香料和霓虹。',
+      theme: 'cairo',
       segments: 1080,
       laps: 3,
       difficulty: '★★☆',
@@ -265,11 +285,11 @@
     },
     {
       id: 'crimson',
-      name: 'CRIMSON PASS',
-      cn: '赤色山口',
-      sector: 'SECTOR 21',
-      desc: '长距离大起伏与高速盲弯，考验勇气和刹车点。',
-      theme: 'crimson',
+      name: 'GIZA PLATEAU',
+      cn: '吉萨高原',
+      sector: 'SECTOR 13',
+      desc: '金字塔脚下的高速长弯，沙丘与落日一起压向赛道。',
+      theme: 'cairo',
       segments: 1360,
       laps: 3,
       difficulty: '★★★',
@@ -279,11 +299,11 @@
     },
     {
       id: 'skyline',
-      name: 'SKYLINE SPRINT',
-      cn: '天际冲刺',
-      sector: 'SECTOR 33',
-      desc: '短促、密集、几乎没有喘息的技术型城市赛道。',
-      theme: 'skyline',
+      name: 'CITADEL RUN',
+      cn: '萨拉丁城堡',
+      sector: 'SECTOR 21',
+      desc: '从萨拉丁城堡俯冲进开罗老城，密集弯道几乎没有喘息。',
+      theme: 'cairo',
       segments: 1000,
       laps: 4,
       difficulty: '★★★',
@@ -303,11 +323,11 @@
   };
 
   const CAREER_EVENTS = [
-    { id: 'e1', name: 'FIRST NIGHT', cn: '第一夜', track: 'midnight', laps: 2, difficulty: 'rookie', target: 3, reward: 260, color: '#52ffb8', desc: '熟悉午夜环线，登上领奖台。' },
-    { id: 'e2', name: 'HARBOR RUN', cn: '港湾追逐', track: 'harbor', laps: 2, difficulty: 'standard', target: 3, reward: 360, color: '#27e6ff', desc: '连续 S 弯，保持走线节奏。' },
-    { id: 'e3', name: 'REDLINE PASS', cn: '赤色突破', track: 'crimson', laps: 3, difficulty: 'standard', target: 2, reward: 520, color: '#ff8a3d', desc: '大起伏与盲弯，必须进入前二。' },
-    { id: 'e4', name: 'SKYLINE SPRINT', cn: '天际冲刺', track: 'skyline', laps: 3, difficulty: 'pro', target: 2, reward: 720, color: '#ff76ae', desc: '短促技术赛道，验证你的极限。' },
-    { id: 'e5', name: 'NIGHT CHAMPION', cn: '午夜之王', track: 'midnight', laps: 4, difficulty: 'pro', target: 1, reward: 1400, color: '#ffd36e', desc: '四圈决胜，只接受第一名。' },
+    { id: 'e1', name: 'FIRST RUN', cn: '初入开罗', track: 'midnight', laps: 2, difficulty: 'rookie', target: 3, reward: 260, color: '#52ffb8', desc: '沿尼罗河完成第一场夜飙，登上领奖台。' },
+    { id: 'e2', name: 'SOUQ RUN', cn: '老城穿行', track: 'harbor', laps: 2, difficulty: 'standard', target: 3, reward: 360, color: '#2ee6d6', desc: '穿过汗哈利利灯巷，保持走线节奏。' },
+    { id: 'e3', name: 'PYRAMID RUN', cn: '金字塔冲刺', track: 'crimson', laps: 3, difficulty: 'standard', target: 2, reward: 520, color: '#ffb347', desc: '沙丘与落日之间，必须进入前二。' },
+    { id: 'e4', name: 'CITADEL SPRINT', cn: '城堡冲刺', track: 'skyline', laps: 3, difficulty: 'pro', target: 2, reward: 720, color: '#ff76ae', desc: '从萨拉丁城堡俯冲，验证你的极限。' },
+    { id: 'e5', name: 'CAIRO KING', cn: '开罗之王', track: 'midnight', laps: 4, difficulty: 'pro', target: 1, reward: 1400, color: '#ffd36e', desc: '四圈决胜，只接受第一名。' },
   ];
 
   const UPGRADE_DEFS = [
@@ -338,7 +358,7 @@
     { id: 'first_win', name: 'WINNER', cn: '冠军之夜', desc: '赢得第一场比赛', metric: 'wins', target: 1, reward: 200, icon: '02' },
     { id: 'podium3', name: 'PODIUM REGULAR', cn: '领奖台常客', desc: '累计 3 次登上领奖台', metric: 'podiums', target: 3, reward: 250, icon: '03' },
     { id: 'collector', name: 'COLLECTOR', cn: '车库收藏家', desc: '拥有全部 3 台赛车', metric: 'cars', target: 3, reward: 500, icon: '04' },
-    { id: 'champion', name: 'NIGHT CHAMPION', cn: '午夜之王', desc: '完成全部 5 场生涯赛事', metric: 'events', target: 5, reward: 1000, icon: '05' },
+    { id: 'champion', name: 'CAIRO KING', cn: '开罗之王', desc: '完成全部 5 场生涯赛事', metric: 'events', target: 5, reward: 1000, icon: '05' },
     { id: 'record1', name: 'RECORD RUN', cn: '纪录创造者', desc: '创造 1 个赛道纪录', metric: 'records', target: 1, reward: 200, icon: '06' },
     { id: 'drift60', name: 'SIDEWAYS', cn: '侧滑艺术', desc: '累计漂移 60 秒', metric: 'drift', target: 60, reward: 300, icon: '07' },
     { id: 'nitro120', name: 'NITRO ADDICT', cn: '氮气依赖', desc: '累计使用氮气 120 秒', metric: 'nitro', target: 120, reward: 300, icon: '08' },
@@ -587,7 +607,7 @@
   // palette rebuilt per selected track theme
   const FOG_STEPS = 24;
   const fogPalette = [];
-  let currentTheme = THEMES.midnight;
+  let currentTheme = THEMES.cairo;
 
   function rebuildFogPalette(theme) {
     currentTheme = theme;
@@ -652,7 +672,7 @@
   const RACER_COUNT = 6;
   const MAX_KMH = 500;
   const WALL_LIMIT = 1.27;
-  const APP_VERSION = '7.1';
+  const APP_VERSION = '8.0';
 
   const QUALITY_PRESETS = {
     high: { drawDistance: 300, dpr: 2, particles: 1, label: '高' },
@@ -1298,7 +1318,7 @@
       g.fillStyle = 'rgba(255,255,255,0.6)';
       g.font = '700 9px "Bahnschrift", Arial, sans-serif';
       g.textAlign = 'center';
-      g.fillText('NIGHTSHIFT', 240, 240);
+      g.fillText('CAIRO RUSH', 240, 240);
 
       // Fine highlights
       g.strokeStyle = 'rgba(255,255,255,0.22)';
@@ -1532,12 +1552,111 @@
     });
   }
 
+  function makePyramidSprite(accent = '#ffb347') {
+    return makeCanvas(1000, 620, (g) => {
+      g.clearRect(0, 0, 1000, 620);
+      const horizon = 560;
+      const pyramid = (cx, base, height, tint) => {
+        const half = base / 2;
+        const grad = g.createLinearGradient(cx - half, 0, cx + half, 0);
+        grad.addColorStop(0, '#2a1210');
+        grad.addColorStop(0.52, tint);
+        grad.addColorStop(1, '#160908');
+        g.fillStyle = grad;
+        g.beginPath();
+        g.moveTo(cx - half, horizon);
+        g.lineTo(cx, horizon - height);
+        g.lineTo(cx + half, horizon);
+        g.closePath();
+        g.fill();
+        g.strokeStyle = withAlpha(accent, 0.5);
+        g.lineWidth = 2;
+        g.stroke();
+        g.strokeStyle = withAlpha('#ffe0a3', 0.18);
+        g.lineWidth = 1;
+        for (let i = 1; i < 7; i++) {
+          const t = i / 7;
+          g.beginPath();
+          g.moveTo(cx - half * (1 - t), horizon - height * t);
+          g.lineTo(cx + half * (1 - t), horizon - height * t);
+          g.stroke();
+        }
+        g.fillStyle = withAlpha(accent, 0.32);
+        g.fillRect(cx - half, horizon - 5, base, 5);
+      };
+      pyramid(380, 520, 410, '#70402b');
+      pyramid(690, 270, 210, '#5a3022');
+      g.fillStyle = withAlpha(accent, 0.28);
+      g.beginPath();
+      g.arc(760, 96, 42, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = withAlpha('#ffd36e', 0.65);
+      g.beginPath();
+      g.arc(760, 96, 26, 0, Math.PI * 2);
+      g.fill();
+    });
+  }
+
+  function makeMinaretSprite(accent = '#ffb347') {
+    return makeCanvas(360, 1120, (g) => {
+      g.translate(180, 1100);
+      g.fillStyle = '#140b09';
+      g.strokeStyle = 'rgba(255,209,150,0.55)';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(-86, 0); g.lineTo(-62, -160); g.lineTo(62, -160); g.lineTo(86, 0);
+      g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#1d100c';
+      g.fillRect(-48, -760, 96, 610);
+      g.strokeStyle = 'rgba(255,209,150,0.42)';
+      g.strokeRect(-48, -760, 96, 610);
+      for (const y of [-700, -560, -420, -280]) {
+        g.fillStyle = '#25140f';
+        g.fillRect(-64, y, 128, 14);
+        g.fillStyle = accent;
+        g.globalAlpha = 0.78;
+        g.fillRect(-64, y, 128, 3);
+        g.globalAlpha = 1;
+      }
+      g.fillStyle = '#1a0e0b';
+      g.beginPath();
+      g.moveTo(-44, -760);
+      g.quadraticCurveTo(0, -840, 44, -760);
+      g.closePath();
+      g.fill();
+      g.strokeStyle = accent;
+      g.globalAlpha = 0.75;
+      g.stroke();
+      g.globalAlpha = 1;
+      g.fillStyle = accent;
+      g.beginPath();
+      g.arc(0, -846, 7, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = accent;
+      g.lineWidth = 4;
+      g.beginPath();
+      g.moveTo(-12, -858); g.quadraticCurveTo(0, -886, 12, -858); g.stroke();
+      for (let i = 0; i < 5; i++) {
+        g.fillStyle = accent;
+        g.globalAlpha = 0.65;
+        g.fillRect(-30, -720 + i * 120, 9, 22);
+        g.fillRect(21, -720 + i * 120, 9, 22);
+        g.globalAlpha = 1;
+      }
+      const glow = g.createLinearGradient(0, -900, 0, 0);
+      glow.addColorStop(0, withAlpha(accent, 0.3));
+      glow.addColorStop(1, withAlpha(accent, 0));
+      g.fillStyle = glow;
+      g.fillRect(-70, -900, 140, 900);
+    });
+  }
+
   function makeBillboardSprite(variant, accent) {
     const signs = [
-      ['NIGHT', 'CITY'],
-      ['極 速', '2088'],
-      ['NEON', 'DRIVE'],
-      ['DSK', 'ARCADE'],
+      ['开罗', 'CAIRO RUSH'],
+      ['NILE', 'CORNICHE'],
+      ['KHAN', 'EL-KHALILI'],
+      ['GIZA', 'PYRAMIDS'],
     ];
     const [top, bottom] = signs[variant % signs.length];
     return makeCanvas(720, 500, (g) => {
@@ -1642,11 +1761,11 @@
       g.save();
       g.shadowColor = accent;
       g.shadowBlur = 20;
-      g.fillText('N I G H T S H I F T', 600, 141);
+      g.fillText('C A I R O   R U S H', 600, 141);
       g.restore();
       g.font = '700 21px "Bahnschrift", sans-serif';
       g.fillStyle = accent;
-      g.fillText('SECTOR 09  ·  MIDNIGHT LOOP', 600, 175);
+      g.fillText('SECTOR 01  ·  NILE CORNICHE', 600, 175);
 
       // small side sequence lights
       for (let i = 0; i < 5; i++) {
@@ -1776,15 +1895,18 @@
     lampCyan: makeLampSprite('#3de4ff'),
     rockWarm: makeRockSprite('#ff6c5c'),
     cactusWarm: makeCactusSprite('#ffb15e'),
+    minaretWarm: makeMinaretSprite('#ffb347'),
+    minaretCyan: makeMinaretSprite('#2ee6d6'),
+    pyramidWarm: makePyramidSprite('#ffb347'),
     billboards: [
-      makeBillboardSprite(0, '#ff2d95'),
-      makeBillboardSprite(1, '#27e6ff'),
-      makeBillboardSprite(2, '#a97bff'),
+      makeBillboardSprite(0, '#ffb347'),
+      makeBillboardSprite(1, '#2ee6d6'),
+      makeBillboardSprite(2, '#ff4f9a'),
       makeBillboardSprite(3, '#ffd166'),
     ],
     gates: [
-      makeGateSprite('#27e6ff'),
-      makeGateSprite('#ff2d95'),
+      makeGateSprite('#2ee6d6'),
+      makeGateSprite('#ffb347'),
     ],
   };
 
@@ -1915,6 +2037,47 @@
     const rand = mulberry32(77821);
     const cityCanvas = makeCanvas(width, height, (g) => {
       g.clearRect(0, 0, width, height);
+      if (theme.id === 'cairo') {
+        const horizon = height * 0.94;
+        const pyramids = [
+          { x: width * 0.12, base: height * 0.52, peak: height * 0.12 },
+          { x: width * 0.27, base: height * 0.58, peak: height * 0.26 },
+          { x: width * 0.43, base: height * 0.44, peak: height * 0.04 },
+        ];
+        for (const p of pyramids) {
+          const half = p.base * 0.56;
+          const pg = g.createLinearGradient(p.x - half, 0, p.x + half, 0);
+          pg.addColorStop(0, theme.far.bottom);
+          pg.addColorStop(0.48, theme.far.top);
+          pg.addColorStop(1, theme.far.rim);
+          g.fillStyle = pg;
+          g.beginPath();
+          g.moveTo(p.x - half, horizon);
+          g.lineTo(p.x, p.peak);
+          g.lineTo(p.x + half, horizon);
+          g.closePath();
+          g.fill();
+          g.strokeStyle = withAlpha(theme.accent, 0.28);
+          g.lineWidth = 1.4;
+          g.stroke();
+        }
+        for (let i = 0; i < 7; i++) {
+          const mx = width * (0.06 + i * 0.145);
+          const mh = height * (0.34 + (i % 3) * 0.08);
+          const mw = Math.max(4, width * 0.004);
+          g.fillStyle = theme.near.top;
+          g.fillRect(mx - mw / 2, horizon - mh, mw, mh);
+          g.fillStyle = theme.near.top;
+          g.fillRect(mx - mw * 1.5, horizon - mh * 0.68, mw * 3, 4);
+          g.fillStyle = theme.accent;
+          g.globalAlpha = 0.62;
+          g.fillRect(mx - mw / 2, horizon - mh * 0.6, mw, 2);
+          g.beginPath();
+          g.arc(mx, horizon - mh, mw * 0.9, 0, Math.PI * 2);
+          g.fill();
+          g.globalAlpha = 1;
+        }
+      }
       let x = 0;
       while (x < width) {
         const bw = 10 + rand() * 28;
@@ -2142,7 +2305,7 @@
 
   function buildTrack(def) {
     const trackDef = def || TRACK_BY_ID[selectedTrackId] || TRACK_DEFS[0];
-    const theme = THEMES[trackDef.theme] || THEMES.midnight;
+    const theme = THEMES[trackDef.theme] || THEMES.cairo;
     rebuildFogPalette(theme);
     TRACK_SEGMENTS = trackDef.segments;
     TRACK_LENGTH = SEGMENT_LENGTH * TRACK_SEGMENTS;
@@ -2184,8 +2347,8 @@
 
     const decor = theme.decor;
     for (let i = 4; i < N; i += 1) {
-      const lampEvery = decor === 'city' ? 20 : decor === 'desert' ? 30 : 26;
-      const palmEvery = decor === 'city' ? 40 : 26;
+      const lampEvery = decor === 'city' ? 20 : decor === 'desert' ? 30 : decor === 'cairo' ? 20 : 26;
+      const palmEvery = decor === 'city' ? 40 : decor === 'cairo' ? 18 : 26;
 
       if (i % palmEvery === 0) {
         const side = (Math.floor(i / palmEvery) % 2 === 0) ? -1 : 1;
@@ -2206,6 +2369,13 @@
               image: cyan ? sprites.palmCyan : sprites.palmPink,
             });
           }
+        } else if (decor === 'cairo') {
+          track[i].decorations.push({
+            kind: 'palm',
+            offset: side * (1.4 + (i % 3) * 0.08),
+            width: 840,
+            image: cyan ? sprites.palmCyan : sprites.palmPink,
+          });
         } else {
           track[i].decorations.push({
             kind: 'palm',
@@ -2214,6 +2384,27 @@
             image: cyan ? sprites.palmCyan : sprites.palmPink,
           });
         }
+      }
+
+      if (decor === 'cairo' && i % 88 === 36) {
+        const side = (Math.floor(i / 88) % 2 === 0) ? -1 : 1;
+        const cyan = i % 176 === 36;
+        track[i].decorations.push({
+          kind: 'minaret',
+          offset: side * (1.82 + (i % 2) * 0.16),
+          width: 980,
+          image: cyan ? sprites.minaretCyan : sprites.minaretWarm,
+        });
+      }
+
+      if (decor === 'cairo' && i % 264 === 96) {
+        const side = (Math.floor(i / 264) % 2 === 0) ? -1 : 1;
+        track[i].decorations.push({
+          kind: 'pyramid',
+          offset: side * 2.9,
+          width: 3200,
+          image: sprites.pyramidWarm,
+        });
       }
 
       if (i % lampEvery === (lampEvery === 20 ? 8 : 13)) {
@@ -2253,7 +2444,7 @@
     const def = TRACK_BY_ID[trackId] || TRACK_DEFS[0];
     selectedTrackId = def.id;
     profile.lastTrack = def.id;
-    currentTheme = THEMES[def.theme] || THEMES.midnight;
+    currentTheme = THEMES[def.theme] || THEMES.cairo;
     buildTrack(def);
     if (rebuildScene) buildBackdrop();
     buildMinimapPath();
@@ -2525,7 +2716,7 @@
     });
   }
 
-  function setCountdown(text, sub = 'HOLD THE LINE', isGo = false, stage = null) {
+  function setCountdown(text, sub = 'YALLA HABIBI', isGo = false, stage = null) {
     ui.countdown.classList.remove('is-hidden');
     ui.countdownNum.textContent = text;
     ui.countdownSub.textContent = sub;
@@ -3877,6 +4068,36 @@
       pushGLVertex(opaque, p3[0], p3[1], p3[2], mountainColor);
     }
 
+    if (currentTheme.id === 'cairo') {
+      const pyramidDark = glHex(currentTheme.far.bottom);
+      const pyramidLight = glHex(currentTheme.far.rim);
+      const pyramidMid = glHex(currentTheme.far.top);
+      const pyramids = [
+        { a: 0.42, r: 69000, base: 10500, h: 7600 },
+        { a: 0.62, r: 73000, base: 7800, h: 5600 },
+        { a: 0.78, r: 76000, base: 6200, h: 4400 },
+      ];
+      for (const p of pyramids) {
+        const cx = Math.cos(p.a) * p.r;
+        const cz = Math.sin(p.a) * p.r;
+        const half = p.base / 2;
+        const apex = [cx, groundY + p.h, cz];
+        const corners = [
+          [cx - half, groundY, cz - half],
+          [cx + half, groundY, cz - half],
+          [cx + half, groundY, cz + half],
+          [cx - half, groundY, cz + half],
+        ];
+        const colors = [pyramidLight, pyramidMid, pyramidDark, pyramidMid];
+        for (let i = 0; i < 4; i++) {
+          const c = colors[i];
+          pushGLVertex(opaque, corners[i][0], corners[i][1], corners[i][2], c);
+          pushGLVertex(opaque, corners[(i + 1) % 4][0], corners[(i + 1) % 4][1], corners[(i + 1) % 4][2], c);
+          pushGLVertex(opaque, apex[0], apex[1], apex[2], c);
+        }
+      }
+    }
+
     for (let n = 0; n < DRAW_DISTANCE + 9; n++) {
       const idx = mod(start + n, TRACK_SEGMENTS);
       const a = TRACK_POINTS[idx];
@@ -4001,8 +4222,8 @@
       const fz = Math.cos(p.heading);
       const cx = p.x + p.rx * x * half;
       const cz = p.z + p.rz * x * half;
-      const sw = 1000;
-      const sl = 1900;
+      const sw = 760;
+      const sl = 1380;
       const y = p.y + 5;
       glLocalQuad(shadows,
         [cx - p.rx * sw / 2 - fx * sl / 2, y, cz - p.rz * sw / 2 - fz * sl / 2],
@@ -4023,7 +4244,7 @@
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
-    drawGLColor(shadows, 0.4);
+    drawGLColor(shadows, 0.1);
     gl.depthMask(true);
     gl.disable(gl.BLEND);
     drawGLBillboards(billboards);
@@ -4960,7 +5181,7 @@
     showRaceHud(true);
     showTouch(true);
     ui.countdown.classList.remove('is-hidden');
-    setCountdown('3', 'HOLD THE LINE', false, 1);
+    setCountdown('3', 'YALLA HABIBI', false, 1);
     race.cdStage = 0;
     audio.countdown(false);
     updateSoundButton();
@@ -5548,7 +5769,7 @@
     ui.resultRank.textContent = `P${result.rank}`;
     ui.resultTitle.textContent = win ? '冠军' : result.rank <= 3 ? '登上领奖台' : '冲线完成';
     ui.resultSub.textContent = win
-      ? '你统治了这条午夜高速。'
+      ? '你统治了开罗的夜色。'
       : result.rank <= 3
         ? '领奖台的灯光为你亮起。'
         : '还差一点。下一次，压住最后一弯。';
@@ -5666,7 +5887,7 @@
         race.cdStage = stage;
         if (stage === 1) { setCountdown('2', 'HEAT THE TIRES', false, 3); audio.countdown(false); }
         else if (stage === 2) { setCountdown('1', 'SEND IT', false, 4); audio.countdown(false); }
-        else if (stage >= 3) { setCountdown('GO', 'NIGHTSHIFT', true, 4); goRace(); }
+        else if (stage >= 3) { setCountdown('GO', 'CAIRO RUSH', true, 4); goRace(); }
       }
       updateParticles(dt);
       audio.setEngine(0.07 + (input.throttle ? 0.1 : 0), input.throttle, false, true);
@@ -5777,7 +5998,7 @@
   function setReplayTrack(trackId) {
     const def = TRACK_BY_ID[trackId] || TRACK_DEFS[0];
     selectedTrackId = def.id;
-    currentTheme = THEMES[def.theme] || THEMES.midnight;
+    currentTheme = THEMES[def.theme] || THEMES.cairo;
     buildTrack(def);
     buildBackdrop();
     buildMinimapPath();
@@ -5787,7 +6008,7 @@
     const trackId = replayState.previousTrackId || 'midnight';
     const def = TRACK_BY_ID[trackId] || TRACK_DEFS[0];
     selectedTrackId = def.id;
-    currentTheme = THEMES[def.theme] || THEMES.midnight;
+    currentTheme = THEMES[def.theme] || THEMES.cairo;
     buildTrack(def);
     buildBackdrop();
     buildMinimapPath();
@@ -5970,7 +6191,7 @@
 
   async function saveReplayPhoto() {
     if (!replayState.photo) return;
-    const name = `nightshift-${race.trackId}-${Date.now()}.png`;
+    const name = `cairo-rush-${race.trackId}-${Date.now()}.png`;
     const finish = async (blob) => {
       if (!blob) return;
       downloadBlob(blob, name);
@@ -6436,7 +6657,7 @@
     if (download) {
       const record = photoRecordsCache.get(download.getAttribute('data-photo-download'));
       if (record && record.blob) {
-        downloadBlob(record.blob, `nightshift-${record.trackId || 'race'}-${record.createdAt || Date.now()}.png`);
+        downloadBlob(record.blob, `cairo-rush-${record.trackId || 'race'}-${record.createdAt || Date.now()}.png`);
         showToast('PHOTO DOWNLOADED', 1400, true);
       }
       return;
@@ -6560,7 +6781,7 @@
     try {
       const choice = await prompt.userChoice;
       if (choice && choice.outcome === 'accepted') {
-        showToast('NIGHTSHIFT 已安装', 2200, true);
+        showToast('开罗狂飙 已安装', 2200, true);
       }
     } catch (e) {
       // user dismissed
@@ -6578,7 +6799,7 @@
     window.addEventListener('appinstalled', () => {
       deferredInstallPrompt = null;
       updateInstallUI();
-      showToast('NIGHTSHIFT 已安装', 2200, true);
+      showToast('开罗狂飙 已安装', 2200, true);
     });
 
     if (!('serviceWorker' in navigator)) return;
@@ -6705,8 +6926,8 @@
       const date = new Date(record.createdAt || Date.now());
       const dateText = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
       return `<figure class="photo-card">
-        <img src="${url}" alt="NIGHTSHIFT 照片 ${dateText}" loading="lazy">
-        <figcaption><span>${record.trackName || 'NIGHTSHIFT'}</span><small>${dateText}</small></figcaption>
+        <img src="${url}" alt="开罗狂飙 照片 ${dateText}" loading="lazy">
+        <figcaption><span>${record.trackName || '开罗狂飙'}</span><small>${dateText}</small></figcaption>
         <div class="photo-actions">
           <button type="button" data-photo-download="${record.id}">下载</button>
           <button type="button" data-photo-delete="${record.id}">删除</button>
@@ -6751,8 +6972,9 @@
   applyRenderer();
   resize();
   if (forcedRenderer === 'webgl' && useWebGL) {
-    setTimeout(() => showToast('WEBGL 3D ACTIVE · v7.1', 2600, true), 700);
+    setTimeout(() => showToast('WEBGL 3D ACTIVE · 开罗狂飙 v8.0', 2600, true), 700);
   }
+
   applyTrack(selectedTrackId, true);
   applyCarSelection(selectedCarId);
   const legacyRecord = getTrackRecord('midnight');

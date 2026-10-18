@@ -1,13 +1,13 @@
 @charset "UTF-8";
 
 :root {
-  --pink: #ff2d95;
-  --pink-soft: #ff8bc8;
-  --cyan: #27e6ff;
-  --violet: #8b5cff;
+  --pink: #ff9a3d;
+  --pink-soft: #ffd3a1;
+  --cyan: #2ee6d6;
+  --violet: #b06bff;
   --amber: #ffd36e;
-  --ink: #05020d;
-  --panel: rgba(10, 4, 23, 0.66);
+  --ink: #08040a;
+  --panel: rgba(16, 8, 10, 0.66);
   --line: rgba(255, 255, 255, 0.13);
   --display: "Bahnschrift", "Arial Narrow", "Impact", "Arial Black", "Microsoft YaHei", sans-serif;
   --body: "Bahnschrift", "Segoe UI", "Microsoft YaHei", sans-serif;
@@ -581,16 +581,16 @@ button { font: inherit; color: inherit; }
   font-style: italic;
   line-height: 0.82;
   letter-spacing: -0.065em;
-  color: #f9f1ff;
+  color: #fff4d8;
   text-shadow:
-    0 1px 0 #ffc9e6,
-    0 4px 0 rgba(110, 28, 95, 0.55),
-    0 0 36px rgba(255, 45, 149, 0.35);
-  background: linear-gradient(180deg, #ffffff 4%, #ffe5f5 37%, #ff8bc8 61%, #b93d9e 100%);
+    0 1px 0 #ffe2a6,
+    0 4px 0 rgba(112, 52, 22, 0.55),
+    0 0 36px rgba(255, 154, 61, 0.35);
+  background: linear-gradient(180deg, #fffdf3 4%, #fff0c8 37%, #ffb347 61%, #b85d2c 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 10px 40px rgba(255, 45, 149, 0.2));
+  filter: drop-shadow(0 10px 40px rgba(255, 154, 61, 0.2));
 }
 
 .game-title::before {
@@ -599,7 +599,7 @@ button { font: inherit; color: inherit; }
   inset: 0;
   z-index: -1;
   color: transparent;
-  -webkit-text-stroke: 1px rgba(255, 117, 202, 0.26);
+  -webkit-text-stroke: 1px rgba(255, 190, 120, 0.28);
   transform: translate(5px, 4px);
   -webkit-text-fill-color: transparent;
 }
@@ -612,8 +612,8 @@ button { font: inherit; color: inherit; }
   width: min(610px, 78%);
   color: rgba(255, 255, 255, 0.72);
 }
-.title-rule span { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255, 45, 149, 0.8), rgba(255, 255, 255, 0.08)); }
-.title-rule span:last-child { background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 45, 149, 0.1)); }
+.title-rule span { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255, 154, 61, 0.8), rgba(255, 255, 255, 0.08)); }
+.title-rule span:last-child { background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(46, 230, 214, 0.18)); }
 .title-rule b { font-size: clamp(10px, 1vw, 14px); font-weight: 500; letter-spacing: 0.42em; color: rgba(255, 255, 255, 0.74); white-space: nowrap; }
 
 .title-copy {
@@ -641,10 +641,10 @@ button { font: inherit; color: inherit; }
   padding: 16px 25px 16px 31px;
   border: 0;
   cursor: pointer;
-  background: linear-gradient(100deg, #ff2d95, #ff6aae 55%, #ffb3d4);
-  color: #1a0211;
+  background: linear-gradient(100deg, #ffb347, #ff8a3d 55%, #ffe0a3);
+  color: #231006;
   clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
-  box-shadow: 0 0 38px rgba(255, 45, 149, 0.32);
+  box-shadow: 0 0 38px rgba(255, 154, 61, 0.32);
   transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.22s;
 }
 

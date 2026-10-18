@@ -10,6 +10,7 @@ v5-*.png
 v6-*.png
 v7-*.png
 v71-*.png
+cairo-*.png
 *.log
 .DS_Store
 Thumbs.db

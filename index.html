@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#05020d">
-  <meta name="description" content="NIGHTSHIFT 霓虹极速 — 一款可直接在浏览器游玩的霓虹风格 3D 街机赛车游戏。">
+  <meta name="theme-color" content="#0b0508">
+  <meta name="description" content="开罗狂飙 CAIRO RUSH — 一款在开罗金字塔、尼罗河与老城街巷中狂飙的 3D 街机赛车游戏。">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="NIGHTSHIFT">
-  <title>NIGHTSHIFT · 霓虹极速</title>
+  <meta name="apple-mobile-web-app-title" content="开罗狂飙">
+  <title>开罗狂飙 · CAIRO RUSH</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ff2d95'/%3E%3Cstop offset='1' stop-color='%2327e6ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='12' fill='%2305020d'/%3E%3Cpath d='M13 46V18h7l16 18V18h7v28h-7L20 28v18z' fill='url(%23g)'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=7.1">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffb347'/%3E%3Cstop offset='1' stop-color='%232ee6d6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='12' fill='%230b0508'/%3E%3Ccircle cx='45' cy='18' r='7' fill='%23ffb347'/%3E%3Cpath d='M8 52 L28 22 L48 52 Z' fill='url(%23g)'/%3E%3Cpath d='M22 52 L36 30 L50 52 Z' fill='%232ee6d6' fill-opacity='.6'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css?v=8.0">
 </head>
 <body>
   <div id="app">
     <canvas id="gl" aria-hidden="true"></canvas>
-    <canvas id="game" aria-label="NIGHTSHIFT 赛车游戏画面"></canvas>
+    <canvas id="game" aria-label="开罗狂飙赛车游戏画面"></canvas>
     <div class="fx fx-scanlines"></div>
     <div class="fx fx-vignette"></div>
     <div class="fx fx-grain"></div>
@@ -40,11 +40,11 @@
         <span class="clock-kicker" id="modeLabel">QUICK RACE</span>
         <b id="raceTime">00:00.000</b>
         <span class="lap-time">LAP <em id="lapTime">00:00.000</em></span>
-        <span class="event-label" id="eventLabel">MIDNIGHT LOOP</span>
+        <span class="event-label" id="eventLabel">NILE CORNICHE</span>
       </div>
 
       <div class="minimap-panel">
-        <div class="map-head"><span id="mapTrackName">MIDNIGHT LOOP</span><em>LIVE</em></div>
+        <div class="map-head"><span id="mapTrackName">NILE CORNICHE</span><em>LIVE</em></div>
         <canvas id="minimap" width="360" height="220" aria-hidden="true"></canvas>
         <div class="map-fade"></div>
       </div>
@@ -103,7 +103,7 @@
     <div id="countdown" class="countdown is-hidden" aria-live="assertive">
       <div class="start-lights" id="startLights"><i></i><i></i><i></i><i></i><i></i></div>
       <div id="countdownNum" class="countdown-num">3</div>
-      <div id="countdownSub" class="countdown-sub">HOLD THE LINE</div>
+      <div id="countdownSub" class="countdown-sub">YALLA HABIBI</div>
     </div>
 
     <!-- 起步提示 -->
@@ -114,9 +114,9 @@
       <div class="menu-shell">
         <div class="brand-line">
           <span class="brand-dot"></span>
-          <span>DSK ARCADE</span>
+          <span>CAIRO ARCADE</span>
           <i></i>
-          <span>NIGHT DIVISION // 2088</span>
+          <span>STREET DIVISION // 2026</span>
         </div>
 
         <div class="profile-chip" id="profileChip">
@@ -129,21 +129,21 @@
         </div>
 
         <div class="title-wrap">
-          <div class="title-kicker">THE CITY NEVER SLEEPS</div>
-          <h1 class="game-title" data-text="NIGHTSHIFT">NIGHTSHIFT</h1>
-          <div class="title-rule"><span></span><b>霓 虹 极 速</b><span></span></div>
-          <p class="title-copy">穿过午夜城际高速。咬住前车，压住弯心，<br>在霓虹熄灭之前冲过终点。</p>
+          <div class="title-kicker">THE NILE NEVER SLEEPS</div>
+          <h1 class="game-title" data-text="开罗狂飙">开罗狂飙</h1>
+          <div class="title-rule"><span></span><b>CAIRO RUSH</b><span></span></div>
+          <p class="title-copy">穿过开罗的霓虹与沙尘。沿尼罗河压弯，<br>在金字塔的落日下冲过终点。</p>
         </div>
 
         <div class="menu-actions">
           <button id="startBtn" class="start-btn" type="button">
             <span class="start-glow"></span>
-            <span class="start-copy"><small>NIGHT RUN</small><b>开始比赛</b></span>
+            <span class="start-copy"><small>CAIRO RUN</small><b>开始比赛</b></span>
             <span class="start-arrow">→</span>
           </button>
           <div class="menu-meta">
             <div class="meta-item"><span>模式</span><b>QUICK RACE</b></div>
-            <div class="meta-item"><span>赛道</span><b id="menuTrackName">午夜环线</b></div>
+            <div class="meta-item"><span>赛道</span><b id="menuTrackName">尼罗河滨海道</b></div>
             <div class="meta-item"><span>赛车</span><b id="menuCarName">VANTA RS</b></div>
           </div>
         </div>
@@ -225,7 +225,7 @@
         <footer class="setup-footer">
           <div class="setup-summary">
             <span>SELECTED RACE</span>
-            <b id="setupSummary">MIDNIGHT LOOP · VANTA RS</b>
+            <b id="setupSummary">NILE CORNICHE · VANTA RS</b>
             <small id="setupSub">3 LAPS · 5 RIVALS · STANDARD</small>
           </div>
           <button id="setupStartBtn" class="start-btn setup-start" type="button">
@@ -243,8 +243,8 @@
         <header class="subpage-head">
           <button id="careerBackBtn" class="back-btn" type="button"><span>←</span> 主菜单</button>
           <div class="subpage-title">
-            <span>CAREER / NIGHT DIVISION</span>
-            <h2>午夜联赛</h2>
+            <span>CAREER / CAIRO UNDERGROUND</span>
+            <h2>开罗联赛</h2>
           </div>
           <div class="wallet">
             <span>CREDITS</span>
@@ -265,7 +265,7 @@
         <header class="subpage-head">
           <button id="profileBackBtn" class="back-btn" type="button"><span>←</span> 主菜单</button>
           <div class="subpage-title">
-            <span>DRIVER FILE / NIGHT DIVISION</span>
+            <span>DRIVER FILE / CAIRO CREW</span>
             <h2>车手档案</h2>
           </div>
           <div class="wallet">
@@ -404,7 +404,7 @@
         <div class="install-row">
           <div>
             <span>INSTALL / OFFLINE</span>
-            <b>把 NIGHTSHIFT 安装到桌面</b>
+            <b>把开罗狂飙安装到桌面</b>
             <small id="installHint">安装后可离线游玩，进度仍保存在本机</small>
           </div>
           <button id="installAppBtn" type="button">安装</button>
@@ -441,7 +441,7 @@
           <div class="modal-eyebrow">RACE COMPLETE</div>
           <div id="resultRank" class="result-rank">P1</div>
           <h2 id="resultTitle">冠军</h2>
-          <p id="resultSub">你统治了这条午夜高速。</p>
+          <p id="resultSub">你统治了开罗的夜色。</p>
         </div>
         <div class="result-grid">
           <div><span>总时间</span><b id="resultTime">00:00.000</b></div>
@@ -463,7 +463,7 @@
       <div class="replay-top">
         <div class="replay-title">
           <span>RACE REPLAY</span>
-          <b id="replayTrackName">MIDNIGHT LOOP</b>
+          <b id="replayTrackName">NILE CORNICHE</b>
           <small id="replayCarName">VANTA RS</small>
         </div>
         <div class="replay-clock">
@@ -516,6 +516,6 @@
     <div id="rotateHint" class="rotate-hint">横屏体验更佳 <span>↻</span></div>
   </div>
 
-  <script src="game.js?v=7.1"></script>
+  <script src="game.js?v=8.0"></script>
 </body>
 </html>

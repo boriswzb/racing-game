@@ -1,10 +1,10 @@
-/* NIGHTSHIFT service worker — offline shell for the static game. */
-const CACHE_NAME = 'nightshift-7.1.0';
+/* CAIRO RUSH service worker — offline shell for the static game. */
+const CACHE_NAME = 'cairo-rush-8.0.0';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=7.1',
-  './game.js?v=7.1',
+  './styles.css?v=8.0',
+  './game.js?v=8.0',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
